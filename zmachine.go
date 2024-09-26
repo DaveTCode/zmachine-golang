@@ -534,7 +534,7 @@ func (z *ZMachine) StepMachine() {
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
 		case 5: // PRINT_CHAR
-			z.text += string(opcode.operands[0].Value(z))
+			z.text += string(uint8(opcode.operands[0].Value(z)))
 
 		case 6: // PRINT_NUM
 			z.text += strconv.Itoa(int(int16(opcode.operands[0].Value(z))))
