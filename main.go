@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-const speedOfTick = 50 * time.Millisecond
 
 var (
 	romFilePath string
@@ -28,36 +25,38 @@ var (
 				Render
 )
 
-type tickMsg time.Time
+type textUpdateMessage string
 
 type applicationModel struct {
-	zMachine    *ZMachine
-	disassembly []string
-}
-
-func newApplicationModel(filePath string) applicationModel {
-	romFileBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		panic(err)
-	}
-
-	return applicationModel{
-		zMachine: LoadRom(romFileBytes),
-	}
+	receiveChannel <-chan string
+	sendChannel    chan<- string
+	zMachine       *ZMachine
+	outputText     string
 }
 
 func (m applicationModel) Init() tea.Cmd {
-	return tea.Batch(tea.SetWindowTitle(romFilePath), tick())
+	return tea.Batch(
+		waitForText(m.receiveChannel),
+		runInterpreter(m.zMachine),
+		//tea.SetWindowTitle(romFilePath),
+	)
+}
+
+func runInterpreter(z *ZMachine) tea.Cmd {
+	return func() tea.Msg {
+		for {
+			z.StepMachine()
+		}
+	}
 }
 
 func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m, tea.Quit
-	case tickMsg:
-		m.disassembly = append(m.disassembly, fmt.Sprintf("0x%x: 0x%x", m.zMachine.callStack.peek().pc, m.zMachine.memory[m.zMachine.callStack.peek().pc]))
-		m.zMachine.StepMachine()
-		return m, tick()
+	case textUpdateMessage:
+		m.outputText += string(msg)
+		return m, waitForText(m.receiveChannel)
 	}
 
 	return m, nil
@@ -66,15 +65,15 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m applicationModel) View() string {
 	s := strings.Builder{}
 
-	s.WriteString(appStyle.Render(m.zMachine.text))
+	s.WriteString(appStyle.Render(m.outputText))
 
 	return s.String()
 }
 
-func tick() tea.Cmd {
-	return tea.Tick(speedOfTick, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
+func waitForText(sub <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		return textUpdateMessage(<-sub)
+	}
 }
 
 func init() {
@@ -83,8 +82,21 @@ func init() {
 }
 
 func main() {
-	applicationModel := newApplicationModel(romFilePath)
-	tui := tea.NewProgram(applicationModel)
+	zMachineOutputChannel := make(chan string)
+	zMachineInputChannel := make(chan string)
+
+	romFileBytes, err := os.ReadFile(romFilePath)
+	if err != nil {
+		panic(err)
+	}
+	zMachine := LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
+
+	appModel := applicationModel{
+		receiveChannel: zMachineOutputChannel,
+		sendChannel:    zMachineInputChannel,
+		zMachine:       zMachine,
+	}
+	tui := tea.NewProgram(appModel)
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)

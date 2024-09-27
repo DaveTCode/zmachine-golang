@@ -54,9 +54,10 @@ func (s *CallStack) peek() *CallStackFrame {
 }
 
 type ZMachine struct {
-	callStack CallStack
-	memory    []uint8
-	text      string
+	callStack     CallStack
+	memory        []uint8
+	outputChannel chan<- string
+	inputChannel  <-chan string
 }
 
 func (z *ZMachine) version() uint8           { return z.memory[0] }
@@ -195,9 +196,12 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16) {
 	}
 }
 
-func LoadRom(rom []uint8) *ZMachine {
-	machine := new(ZMachine)
-	machine.memory = rom
+func LoadRom(rom []uint8, inputChannel <-chan string, outputChannel chan<- string) *ZMachine {
+	machine := ZMachine{
+		memory:        rom,
+		inputChannel:  inputChannel,
+		outputChannel: outputChannel,
+	}
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.version() >= 6 {
@@ -214,7 +218,7 @@ func LoadRom(rom []uint8) *ZMachine {
 		})
 	}
 
-	return machine
+	return &machine
 }
 
 func (z *ZMachine) call(opcode *Opcode) {
@@ -267,9 +271,9 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 
 	if result != branchReversed {
 		if offset == 0 {
-			z.rFalseTrue(frame, 0)
+			z.rFalseTrue(0)
 		} else if offset == 1 {
-			z.rFalseTrue(frame, 1)
+			z.rFalseTrue(1)
 		} else {
 			destination := uint16(int16(frame.pc) + offset - 2)
 			frame.pc = destination
@@ -277,12 +281,16 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 	}
 }
 
-func (z *ZMachine) rFalseTrue(frame *CallStackFrame, val uint16) {
+func (z *ZMachine) rFalseTrue(val uint16) {
 	z.callStack.pop()
 	newFrame := z.callStack.peek()
 
 	destination := z.readIncPC(newFrame)
 	z.writeVariable(destination, val)
+}
+
+func (z *ZMachine) appendText(s string) {
+	z.outputChannel <- s
 }
 
 func (z *ZMachine) StepMachine() {
@@ -293,15 +301,15 @@ func (z *ZMachine) StepMachine() {
 	case OP0:
 		switch opcode.opcodeNumber {
 		case 0: // RTRUE
-			z.rFalseTrue(frame, 1)
+			z.rFalseTrue(1)
 
 		case 1: // RFALSE
-			z.rFalseTrue(frame, 0)
+			z.rFalseTrue(0)
 
 		case 2: // PRINT
 			text, bytesRead := z.readZString(frame.pc)
 			frame.pc += bytesRead
-			z.text += text
+			z.appendText(text)
 
 		case 8: // RET_POPPED
 			v := frame.pop()
@@ -312,7 +320,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(destination, v)
 
 		case 11: // NEWLINE
-			z.text += "\n"
+			z.appendText("\n")
 
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
@@ -338,7 +346,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), z.getObject(opcode.operands[0].Value(z)).parent)
 
 		case 10: // PRINT_OBJ
-			z.text += z.getObjectName(opcode.operands[0].Value(z))
+			z.appendText(z.getObjectName(opcode.operands[0].Value(z)))
 
 		case 11: // RET
 			v := opcode.operands[0].Value(z)
@@ -356,7 +364,7 @@ func (z *ZMachine) StepMachine() {
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(opcode.operands[0].Value(z), true)
 			text, _ := z.readZString(addr)
-			z.text += text
+			z.appendText(text)
 
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
@@ -533,11 +541,15 @@ func (z *ZMachine) StepMachine() {
 		case 3: // PUT_PROP
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
+		case 4: // SREAD
+			rawText := <-z.inputChannel
+			rawText = rawText + "" // TODO - Actually handle input text
+
 		case 5: // PRINT_CHAR
-			z.text += string(uint8(opcode.operands[0].Value(z)))
+			z.appendText(string(uint8(opcode.operands[0].Value(z))))
 
 		case 6: // PRINT_NUM
-			z.text += strconv.Itoa(int(int16(opcode.operands[0].Value(z))))
+			z.appendText(strconv.Itoa(int(int16(opcode.operands[0].Value(z)))))
 
 		case 8: // PUSH
 			frame.push(opcode.operands[0].Value(z))
