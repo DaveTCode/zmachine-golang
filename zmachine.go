@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type RoutineType int
@@ -54,10 +55,12 @@ func (s *CallStack) peek() *CallStackFrame {
 }
 
 type ZMachine struct {
-	callStack     CallStack
-	memory        []uint8
-	outputChannel chan<- string
-	inputChannel  <-chan string
+	callStack          CallStack
+	memory             []uint8
+	dictionary         *Dictionary
+	textOutputChannel  chan<- string
+	stateChangeChannel chan<- stateChangeRequest
+	inputChannel       <-chan string
 }
 
 func (z *ZMachine) version() uint8           { return z.memory[0] }
@@ -196,12 +199,16 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16) {
 	}
 }
 
-func LoadRom(rom []uint8, inputChannel <-chan string, outputChannel chan<- string) *ZMachine {
+func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- stateChangeRequest) *ZMachine {
 	machine := ZMachine{
-		memory:        rom,
-		inputChannel:  inputChannel,
-		outputChannel: outputChannel,
+		memory:             rom,
+		inputChannel:       inputChannel,
+		textOutputChannel:  textOutputChannel,
+		stateChangeChannel: stateChangeChannel,
 	}
+
+	// TODO - Is the dictionary static? If not shouldn't cache like this
+	machine.dictionary = machine.parseDictionary()
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.version() >= 6 {
@@ -290,7 +297,7 @@ func (z *ZMachine) rFalseTrue(val uint16) {
 }
 
 func (z *ZMachine) appendText(s string) {
-	z.outputChannel <- s
+	z.textOutputChannel <- s
 }
 
 func (z *ZMachine) StepMachine() {
@@ -542,8 +549,27 @@ func (z *ZMachine) StepMachine() {
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
 		case 4: // SREAD
+			// TODO - Somehow let UI know how many chars to accept
+			z.stateChangeChannel <- waitForInput
 			rawText := <-z.inputChannel
-			rawText = rawText + "" // TODO - Actually handle input text
+			textBufferPtr := opcode.operands[0].Value(z)
+			//parseBufferPtr := opcode.operands[1].Value(z)
+
+			bufferSize := z.readByte(textBufferPtr)
+			rawTextBytes := []byte(strings.ToLower(rawText))
+			for ix, chr := range rawTextBytes {
+				if ix > int(bufferSize) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
+					break // Too many characters provided
+				}
+
+				if (chr >= 32 && chr <= 126) || (chr >= 155 && chr <= 251) {
+					z.writeByte(textBufferPtr+uint16(ix), chr)
+				} else {
+					z.writeByte(textBufferPtr+uint16(ix), 32)
+				}
+			}
+
+			//words := strings.Split(rawText, " ")
 
 		case 5: // PRINT_CHAR
 			z.appendText(string(uint8(opcode.operands[0].Value(z))))
