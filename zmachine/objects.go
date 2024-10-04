@@ -1,8 +1,10 @@
-package main
+package zmachine
 
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/davetcode/goz/zstring"
 )
 
 type Object struct {
@@ -14,24 +16,28 @@ type Object struct {
 	propertyPointer uint16
 }
 
+type Property struct {
+	id                   uint8
+	length               uint8
+	data                 []uint8
+	propertyHeaderLength uint8
+	address              uint16
+}
+
 func (z *ZMachine) setObjectProperty(objId uint16, propertyId uint8, value uint16) {
 	object := z.getObject(objId)
 	objectNameLength := z.readByte(object.propertyPointer)
 	currentPtr := object.propertyPointer + 1 + uint16(objectNameLength)*2
 
 	for {
-		// TODO - Handle v4+ properties
-		propertySizeByte := z.readByte(uint16(currentPtr))
-
-		if propertySizeByte == 0 {
+		if z.readByte(currentPtr) == 0 {
 			break
 		}
 
-		currentPropertyId := propertySizeByte & 0b1_1111
-		propertySize := (propertySizeByte >> 5) + 1
+		property := z.getObjectProperty(objId, propertyId)
 
-		if currentPropertyId == propertyId {
-			switch propertySize {
+		if property.id == propertyId {
+			switch property.length {
 			case 1:
 				z.writeByte(currentPtr+1, uint8(value))
 			case 2:
@@ -43,46 +49,74 @@ func (z *ZMachine) setObjectProperty(objId uint16, propertyId uint8, value uint1
 			return
 		}
 
-		currentPtr += uint16(propertySize) + 1
+		currentPtr += uint16(property.length) + uint16(property.propertyHeaderLength)
 	}
 
 	// Property not found on object, returning global default for that property
 	panic(fmt.Sprintf("Invalid property (%d) requested for object (%d)", propertyId, objId))
 }
 
-func (z *ZMachine) getObjectProperty(objId uint16, propertyId uint8) []uint8 {
+func (z *ZMachine) getObjectProperty(objId uint16, propertyId uint8) Property {
 	object := z.getObject(objId)
 	objectNameLength := z.readByte(object.propertyPointer)
 	currentPtr := object.propertyPointer + 1 + uint16(objectNameLength)*2
 
 	for {
-		// TODO - Handle v4+ properties
-		propertySizeByte := z.readByte(uint16(currentPtr))
-
-		if propertySizeByte == 0 {
+		// Property table ends with null terminator
+		if z.readByte(currentPtr) == 0 {
 			break
 		}
 
-		currentPropertyId := propertySizeByte & 0b1_1111
-		propertySize := (propertySizeByte >> 5) + 1
+		property := z.getPropertyByAddress(currentPtr)
 
-		if currentPropertyId == propertyId {
-			return z.memory[currentPtr+1 : currentPtr+1+uint16(propertySize)]
+		if property.id == propertyId {
+			return property
 		}
 
-		currentPtr += uint16(propertySize) + 1
+		currentPtr += uint16(property.length) + uint16(property.propertyHeaderLength)
 	}
 
 	// Property not found on object, returning global default for that property
 	defaultTableBase := z.objectTableBase()
 	propertyAddress := defaultTableBase + 2*uint16(propertyId)
-	return z.memory[propertyAddress : propertyAddress+2]
+	return Property{
+		id:   propertyId,
+		data: z.memory[propertyAddress : propertyAddress+2],
+	}
+}
+
+func (z *ZMachine) getPropertyByAddress(propertyAddr uint16) Property {
+	propertySizeByte := z.readByte(propertyAddr)
+	length := (propertySizeByte >> 5) + 1
+	id := propertySizeByte & 0b1_1111
+	data := z.memory[propertyAddr+1 : propertyAddr+1+uint16(length)]
+	propertyHeaderLength := uint8(1)
+
+	if z.version() >= 4 {
+		if propertySizeByte>>7 == 1 {
+			length = (z.readByte(propertyAddr+1) & 0b11_1111) + 1
+			id = propertySizeByte & 0b11_1111
+			data = z.memory[propertyAddr+2 : propertyAddr+2+uint16(length)]
+			propertyHeaderLength = 2
+		} else {
+			length = ((propertySizeByte >> 6) & 1) + 1
+			id = propertySizeByte & 0b11_1111
+		}
+	}
+
+	return Property{
+		id:                   id,
+		length:               length,
+		data:                 data,
+		propertyHeaderLength: propertyHeaderLength,
+		address:              propertyAddr,
+	}
 }
 
 func (z *ZMachine) getObjectName(objId uint16) string {
 	obj := z.getObject(objId)
 
-	name, _ := z.readZString(obj.propertyPointer + 1)
+	name, _ := zstring.ReadZString(z.memory[obj.propertyPointer+1:], z.version())
 
 	return name
 }

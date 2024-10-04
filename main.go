@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/davetcode/goz/zmachine"
 )
 
 var (
@@ -27,15 +28,9 @@ var (
 )
 
 type textUpdateMessage string
-type stateUpdateMessage stateChangeRequest
+type stateUpdateMessage zmachine.StateChangeRequest
 
-type stateChangeRequest int
 type appState int
-
-const (
-	waitForInput stateChangeRequest = iota
-	running      stateChangeRequest = iota
-)
 
 const (
 	appRunning         appState = iota
@@ -44,9 +39,9 @@ const (
 
 type applicationModel struct {
 	textChannel        <-chan string
-	stateChangeChannel <-chan stateChangeRequest
+	stateChangeChannel <-chan zmachine.StateChangeRequest
 	sendChannel        chan<- string
-	zMachine           *ZMachine
+	zMachine           *zmachine.ZMachine
 	outputText         string
 	appState           appState
 	inputBox           textinput.Model
@@ -61,7 +56,7 @@ func (m applicationModel) Init() tea.Cmd {
 	)
 }
 
-func runInterpreter(z *ZMachine) tea.Cmd {
+func runInterpreter(z *zmachine.ZMachine) tea.Cmd {
 	return func() tea.Msg {
 		for {
 			z.StepMachine()
@@ -85,11 +80,11 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.outputText += string(msg)
 		return m, waitForText(m.textChannel)
 	case stateUpdateMessage:
-		switch stateChangeRequest(msg) {
-		case waitForInput:
+		switch zmachine.StateChangeRequest(msg) {
+		case zmachine.WaitForInput:
 			// TODO - Refresh status bar here (maybe version dependent?)
 			m.appState = appWaitingForInput
-		case running:
+		case zmachine.Running:
 			m.appState = appRunning
 		}
 		return m, waitForStateChange(m.stateChangeChannel)
@@ -120,7 +115,7 @@ func waitForText(sub <-chan string) tea.Cmd {
 	}
 }
 
-func waitForStateChange(sub <-chan stateChangeRequest) tea.Cmd {
+func waitForStateChange(sub <-chan zmachine.StateChangeRequest) tea.Cmd {
 	return func() tea.Msg {
 		return stateUpdateMessage(<-sub)
 	}
@@ -131,7 +126,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *ZMachine, inputChannel chan<- string, textOutputChannel <-chan string, stateChangeChannel <-chan stateChangeRequest) applicationModel {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, textOutputChannel <-chan string, stateChangeChannel <-chan zmachine.StateChangeRequest) applicationModel {
 	ti := textinput.New()
 	ti.Focus()
 	ti.CharLimit = 156
@@ -150,17 +145,17 @@ func newApplicationModel(zMachine *ZMachine, inputChannel chan<- string, textOut
 
 func main() {
 	zMachineTextChannel := make(chan string)
-	zMachineStateChangeChannel := make(chan stateChangeRequest)
+	zMachineStateChangeChannel := make(chan zmachine.StateChangeRequest)
 	zMachineInputChannel := make(chan string)
 
 	romFileBytes, err := os.ReadFile(romFilePath)
 	if err != nil {
 		panic(err)
 	}
-	zMachine := LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel)
+	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel)
 
 	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel)
-	tui := tea.NewProgram(appModel, tea.WithAltScreen())
+	tui := tea.NewProgram(appModel)
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)

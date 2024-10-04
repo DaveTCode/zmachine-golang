@@ -1,4 +1,4 @@
-package main
+package zmachine
 
 type OperandType int
 type OpcodeForm int
