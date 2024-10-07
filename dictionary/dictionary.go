@@ -25,18 +25,18 @@ type Dictionary struct {
 	entries []DictionaryEntry
 }
 
-func ParseDictionary(bytes []uint8, baseAddress uint16, version uint8) *Dictionary {
-	dictionaryPtr := uint16(0)
+func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8) *Dictionary {
+	dictionaryPtr := uint32(0)
 	numInputCodes := bytes[dictionaryPtr]
 
 	header := DictionaryHeader{
 		n:          numInputCodes,
-		InputCodes: bytes[dictionaryPtr+1 : dictionaryPtr+uint16(numInputCodes)+1],
-		length:     bytes[(dictionaryPtr + 1 + uint16(numInputCodes))],
-		count:      int16(binary.BigEndian.Uint16(bytes[dictionaryPtr+2+uint16(numInputCodes) : dictionaryPtr+4+uint16(numInputCodes)])),
+		InputCodes: bytes[dictionaryPtr+1 : dictionaryPtr+uint32(numInputCodes)+1],
+		length:     bytes[(dictionaryPtr + 1 + uint32(numInputCodes))],
+		count:      int16(binary.BigEndian.Uint16(bytes[dictionaryPtr+2+uint32(numInputCodes) : dictionaryPtr+4+uint32(numInputCodes)])),
 	}
 
-	entryPtr := dictionaryPtr + 4 + uint16(numInputCodes)
+	entryPtr := dictionaryPtr + 4 + uint32(numInputCodes)
 	var entries = make([]DictionaryEntry, header.count)
 
 	encodedWordLength := 4
@@ -45,16 +45,16 @@ func ParseDictionary(bytes []uint8, baseAddress uint16, version uint8) *Dictiona
 	}
 
 	for ix := 0; ix < int(header.count); ix++ {
-		encodedWord := bytes[entryPtr : entryPtr+uint16(encodedWordLength)+1]
+		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)+1]
 		decodedWord, _ := zstring.ReadZString(bytes[entryPtr:], version)
 		entries[ix] = DictionaryEntry{
-			address:     entryPtr + baseAddress,
+			address:     uint16(entryPtr + baseAddress),
 			encodedWord: encodedWord,
 			decodedWord: decodedWord,
-			data:        bytes[entryPtr+uint16(encodedWordLength) : entryPtr+uint16(header.length)+1],
+			data:        bytes[entryPtr+uint32(encodedWordLength) : entryPtr+uint32(header.length)+1],
 		}
 
-		entryPtr += uint16(header.length)
+		entryPtr += uint32(header.length)
 	}
 
 	return &Dictionary{

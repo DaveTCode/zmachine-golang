@@ -15,8 +15,8 @@ const (
 	a2 Alphabet = 2
 )
 
-func ReadZString(bytes []uint8, version uint8) (string, uint16) {
-	bytesRead := uint16(0)
+func ReadZString(bytes []uint8, version uint8) (string, uint32) {
+	bytesRead := uint32(0)
 	ptr := 0
 	baseAlphabet := a0
 	currentAlphabet := a0
@@ -42,7 +42,8 @@ func ReadZString(bytes []uint8, version uint8) (string, uint16) {
 		}
 	}
 
-	for i, zchr := range zchrStream {
+	for i := 0; i < len(zchrStream); i++ {
+		zchr := zchrStream[i]
 		currentAlphabet = nextAlphabet
 		nextAlphabet = baseAlphabet
 
@@ -86,6 +87,7 @@ func ReadZString(bytes []uint8, version uint8) (string, uint16) {
 			// with casting down to uint8 here. Maybe not strictly accurate and would be worth revisiting - TODO
 			if currentAlphabet == 2 && zchr == 6 {
 				chrStream = append(chrStream, uint8(zchrStream[i+1]<<5|zchrStream[i+2]))
+				i += 2
 			} else {
 				switch currentAlphabet {
 				case a0:

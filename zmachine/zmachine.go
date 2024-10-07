@@ -3,8 +3,10 @@ package zmachine
 import (
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/davetcode/goz/dictionary"
 	"github.com/davetcode/goz/zstring"
@@ -26,7 +28,7 @@ const (
 )
 
 type CallStackFrame struct {
-	pc              uint16   // TODO - What is the usual limit to this number?
+	pc              uint32   // TODO - What is the usual limit to this number?
 	routineStack    []uint16 // TODO - Really a stack, check how it's used to see if we care
 	locals          []uint16
 	routineType     RoutineType // v3+ only
@@ -68,6 +70,7 @@ type ZMachine struct {
 	callStack          CallStack
 	memory             []uint8
 	dictionary         *dictionary.Dictionary
+	rng                rand.Rand
 	textOutputChannel  chan<- string
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
@@ -121,7 +124,7 @@ func (z *ZMachine) extensionTableBaseAddress() uint16 {
 }
 func (z *ZMachine) playerLoginName() []uint8 { return z.memory[0x38:0x40] }
 
-func (z *ZMachine) packedAddress(originalAddress uint16, isZString bool) uint16 {
+func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 {
 	switch {
 	case z.version() < 4:
 		return 2 * originalAddress
@@ -132,7 +135,7 @@ func (z *ZMachine) packedAddress(originalAddress uint16, isZString bool) uint16 
 		if isZString {
 			offset = z.stringOffset()
 		}
-		return 4*originalAddress + 8*offset
+		return 4*originalAddress + 8*uint32(offset)
 	case z.version() == 8:
 		return 8 * originalAddress
 	default:
@@ -141,31 +144,31 @@ func (z *ZMachine) packedAddress(originalAddress uint16, isZString bool) uint16 
 }
 
 func (z *ZMachine) readIncPC(frame *CallStackFrame) uint8 {
-	v := z.readByte(frame.pc)
+	v := z.readByte(uint32(frame.pc))
 	frame.pc++
 	return v
 }
 
 func (z *ZMachine) readHalfWordIncPC(frame *CallStackFrame) uint16 {
-	v := z.readHalfWord(frame.pc)
+	v := z.readHalfWord(uint32(frame.pc))
 	frame.pc += 2
 	return v
 }
 
-func (z *ZMachine) readByte(address uint16) uint8 {
+func (z *ZMachine) readByte(address uint32) uint8 {
 	return z.memory[address]
 }
 
-func (z *ZMachine) writeByte(address uint16, value uint8) {
+func (z *ZMachine) writeByte(address uint32, value uint8) {
 	// TODO - Lots of the memory is read only, need to add validation here
 	z.memory[address] = value
 }
 
-func (z *ZMachine) readHalfWord(address uint16) uint16 {
+func (z *ZMachine) readHalfWord(address uint32) uint16 {
 	return binary.BigEndian.Uint16(z.memory[address : address+2])
 }
 
-func (z *ZMachine) writeHalfWord(address uint16, value uint16) {
+func (z *ZMachine) writeHalfWord(address uint32, value uint16) {
 	// TODO - Lots of the memory is read only, need to add validation here
 	binary.BigEndian.PutUint16(z.memory[address:address+2], value)
 }
@@ -188,7 +191,7 @@ func (z *ZMachine) readVariable(variable uint8) uint16 {
 
 		return currentCallFrame.locals[variable-1]
 	default: // Global variables
-		return z.readHalfWord(z.globalVariableBase() + 2*(uint16(variable)-16))
+		return z.readHalfWord(uint32(z.globalVariableBase() + 2*(uint16(variable)-16)))
 	}
 }
 
@@ -205,7 +208,7 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16) {
 
 		currentCallFrame.locals[variable-1] = value
 	default: // Global variables
-		z.writeHalfWord(z.globalVariableBase()+2*(uint16(variable)-16), value)
+		z.writeHalfWord(uint32(z.globalVariableBase()+2*(uint16(variable)-16)), value)
 	}
 }
 
@@ -218,11 +221,11 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	}
 
 	// TODO - Is the dictionary static? If not shouldn't cache like this
-	machine.dictionary = dictionary.ParseDictionary(machine.memory[machine.dictionaryBase():], machine.dictionaryBase(), machine.version())
+	machine.dictionary = dictionary.ParseDictionary(machine.memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.version())
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.version() >= 6 {
-		packedAddress := machine.packedAddress(machine.firstInstruction(), false)
+		packedAddress := machine.packedAddress(uint32(machine.firstInstruction()), false)
 
 		machine.callStack.push(CallStackFrame{
 			pc:     packedAddress + 1,
@@ -230,7 +233,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 		})
 	} else {
 		machine.callStack.push(CallStackFrame{
-			pc:     machine.firstInstruction(),
+			pc:     uint32(machine.firstInstruction()),
 			locals: make([]uint16, 0),
 		})
 	}
@@ -239,7 +242,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 }
 
 func (z *ZMachine) call(opcode *Opcode) {
-	routineAddress := z.packedAddress(opcode.operands[0].Value(z), false)
+	routineAddress := z.packedAddress(uint32(opcode.operands[0].Value(z)), false)
 
 	// Special case, if routine address is 0 then no call is made and 0 is stored in the return address
 	if routineAddress == 0 {
@@ -283,23 +286,23 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 
 	branchReversed := (branchArg1>>7)&1 == 0
 	singleByte := (branchArg1>>6)&1 == 1
-	offset := int16(branchArg1 & 0b11_1111)
+	offset := int32(branchArg1 & 0b11_1111)
 
 	if !singleByte {
-		sign := int16(1)
+		sign := int32(1)
 		if (branchArg1>>5)&1 == 1 {
 			sign = -1
 		}
-		offset = sign*int16((branchArg1&0b11_1111)) | int16(z.readIncPC(frame))
+		offset = sign*int32((branchArg1&0b11_1111)) | int32(z.readIncPC(frame))
 	}
 
 	if result != branchReversed {
 		if offset == 0 {
-			z.rFalseTrue(0)
+			z.retValue(0)
 		} else if offset == 1 {
-			z.rFalseTrue(1)
+			z.retValue(1)
 		} else {
-			destination := uint16(int16(frame.pc) + offset - 2)
+			destination := uint32(int32(frame.pc) + offset - 2)
 			frame.pc = destination
 		}
 	}
@@ -307,11 +310,11 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 
 type word struct {
 	bytes             []uint8
-	startingLocation  uint16
+	startingLocation  uint32
 	dictionaryAddress uint16
 }
 
-func tokeniseSingleWord(bytes []uint8, wordStartPtr uint16, dictionary *dictionary.Dictionary) word {
+func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictionary.Dictionary) word {
 	// TODO - Description here suggests that the string should be turned back into a z-string for comparison with the dictionary although this might work anyway
 	str := string(bytes)
 
@@ -324,7 +327,7 @@ func tokeniseSingleWord(bytes []uint8, wordStartPtr uint16, dictionary *dictiona
 	}
 }
 
-func (z *ZMachine) Tokenise(baddr1 uint16, baddr2 uint16) {
+func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	bytesRead := 0
 	words := make([]word, 0)
 	startingLocation := baddr1
@@ -373,7 +376,7 @@ func (z *ZMachine) Tokenise(baddr1 uint16, baddr2 uint16) {
 	}
 }
 
-func (z *ZMachine) rFalseTrue(val uint16) {
+func (z *ZMachine) retValue(val uint16) {
 	z.callStack.pop()
 	newFrame := z.callStack.peek()
 
@@ -386,6 +389,10 @@ func (z *ZMachine) appendText(s string) {
 }
 
 func (z *ZMachine) StepMachine() {
+	if z.callStack.peek().pc == 0x5f0f {
+		z.memory[0] = z.memory[0]
+	}
+
 	opcode := ParseOpcode(z)
 	frame := z.callStack.peek()
 
@@ -393,23 +400,26 @@ func (z *ZMachine) StepMachine() {
 	case OP0:
 		switch opcode.opcodeNumber {
 		case 0: // RTRUE
-			z.rFalseTrue(1)
+			z.retValue(1)
 
 		case 1: // RFALSE
-			z.rFalseTrue(0)
+			z.retValue(0)
 
 		case 2: // PRINT
 			text, bytesRead := zstring.ReadZString(z.memory[frame.pc:], z.version())
 			frame.pc += bytesRead
 			z.appendText(text)
 
+		case 3: // PRINT_RET
+			text, bytesRead := zstring.ReadZString(z.memory[frame.pc:], z.version())
+			frame.pc += bytesRead
+			z.appendText(text)
+			z.appendText("\n")
+			z.retValue(1)
+
 		case 8: // RET_POPPED
 			v := frame.pop()
-			z.callStack.pop()
-			newFrame := z.callStack.peek()
-
-			destination := z.readIncPC(newFrame)
-			z.writeVariable(destination, v)
+			z.retValue(v)
 
 		case 11: // NEWLINE
 			z.appendText("\n")
@@ -438,7 +448,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), z.getObject(opcode.operands[0].Value(z)).parent)
 
 		case 4: // GET_PROP_LEN
-			property := z.getPropertyByAddress(opcode.operands[0].Value(z) - 1)
+			property := z.getPropertyByAddress(uint32(opcode.operands[0].Value(z) - 1))
 			z.writeVariable(z.readIncPC(frame), uint16(property.length))
 
 		case 5: // INC
@@ -454,19 +464,15 @@ func (z *ZMachine) StepMachine() {
 
 		case 11: // RET
 			v := opcode.operands[0].Value(z)
-			z.callStack.pop()
-			newFrame := z.callStack.peek()
-
-			destination := z.readIncPC(newFrame)
-			z.writeVariable(destination, v)
+			z.retValue(v)
 
 		case 12: // JUMP
 			offset := int16(opcode.operands[0].Value(z))
-			destination := uint16(int16(frame.pc) + offset - 2)
+			destination := uint32(int16(frame.pc) + offset - 2)
 			frame.pc = destination
 
 		case 13: // PRINT_PADDR
-			addr := z.packedAddress(opcode.operands[0].Value(z), true)
+			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
 			text, _ := zstring.ReadZString(z.memory[addr:], z.version())
 			z.appendText(text)
 
@@ -555,15 +561,14 @@ func (z *ZMachine) StepMachine() {
 		case 13: // STORE
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z))
 
-		case 14:
-			// TODO - insert_obj
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+		case 14: // INSERT_OBJ
+			z.moveObject(opcode.operands[0].Value(z), opcode.operands[1].Value(z))
 
 		case 15: // LOADW
-			z.writeVariable(z.readIncPC(frame), z.readHalfWord(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z)))
+			z.writeVariable(z.readIncPC(frame), z.readHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))))
 
 		case 16: // LOADB
-			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(opcode.operands[0].Value(z)+opcode.operands[1].Value(z))))
+			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))))
 
 		case 17: // GET_PROP
 			prop := z.getObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)))
@@ -649,7 +654,11 @@ func (z *ZMachine) StepMachine() {
 		case 1: // STOREW
 			address := opcode.operands[0].Value(z) + 2*opcode.operands[1].Value(z)
 			value := opcode.operands[2].Value(z)
-			z.writeHalfWord(address, value)
+			z.writeHalfWord(uint32(address), value)
+
+		case 2: // STOREB
+			address := opcode.operands[0].Value(z) + opcode.operands[1].Value(z)
+			z.writeByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
 		case 3: // PUT_PROP
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
@@ -661,7 +670,7 @@ func (z *ZMachine) StepMachine() {
 			textBufferPtr := opcode.operands[0].Value(z)
 			parseBufferPtr := opcode.operands[1].Value(z)
 
-			bufferSize := z.readByte(textBufferPtr)
+			bufferSize := z.readByte(uint32(textBufferPtr))
 			rawTextBytes := []byte(strings.ToLower(rawText))
 			for ix, chr := range rawTextBytes {
 				if ix > int(bufferSize) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
@@ -669,13 +678,13 @@ func (z *ZMachine) StepMachine() {
 				}
 
 				if (chr >= 32 && chr <= 126) || (chr >= 155 && chr <= 251) {
-					z.writeByte(textBufferPtr+uint16(ix), chr)
+					z.writeByte(uint32(textBufferPtr+uint16(ix)), chr)
 				} else {
-					z.writeByte(textBufferPtr+uint16(ix), 32)
+					z.writeByte(uint32(textBufferPtr+uint16(ix)), 32)
 				}
 			}
 
-			z.Tokenise(textBufferPtr, parseBufferPtr)
+			z.Tokenise(uint32(textBufferPtr), uint32(parseBufferPtr))
 
 		case 5: // PRINT_CHAR
 			z.appendText(string(uint8(opcode.operands[0].Value(z))))
@@ -683,6 +692,19 @@ func (z *ZMachine) StepMachine() {
 		case 6: // PRINT_NUM
 			z.appendText(strconv.Itoa(int(int16(opcode.operands[0].Value(z)))))
 
+		case 7: // RANDOM
+			n := int16(opcode.operands[0].Value(z))
+			result := uint16(0)
+
+			if n < 0 {
+				z.rng.Seed(int64(n))
+			} else if n == 0 {
+				z.rng.Seed(time.Now().UTC().UnixNano())
+			} else {
+				result = uint16(rand.Int31n(int32(n)))
+			}
+
+			z.writeVariable(z.readIncPC(frame), result)
 		case 8: // PUSH
 			frame.push(opcode.operands[0].Value(z))
 
