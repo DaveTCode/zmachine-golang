@@ -72,6 +72,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
 			m.appState = appRunning
+			m.outputText += m.inputBox.Value() + "\n"
 			m.sendChannel <- m.inputBox.Value()
 			m.inputBox.SetValue("")
 			return m, nil
