@@ -15,20 +15,19 @@ import (
 var (
 	romFilePath string
 
-	appStyle = lipgloss.NewStyle().Padding(1, 2)
+	appStyle = lipgloss.NewStyle()
 
 	titleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFDF5")).
 			Background(lipgloss.Color("#25A065")).
 			Padding(0, 1)
 
-	statusMessageStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#04B575", Dark: "#04B575"}).
-				Render
+	statusMessageStyle = appStyle.Reverse(true)
 )
 
 type textUpdateMessage string
 type stateUpdateMessage zmachine.StateChangeRequest
+type StatusBarMessage zmachine.StatusBar
 
 type appState int
 
@@ -41,7 +40,9 @@ type applicationModel struct {
 	textChannel        <-chan string
 	stateChangeChannel <-chan zmachine.StateChangeRequest
 	sendChannel        chan<- string
+	statusBarChannel   <-chan zmachine.StatusBar
 	zMachine           *zmachine.ZMachine
+	statusBar          zmachine.StatusBar
 	outputText         string
 	appState           appState
 	inputBox           textinput.Model
@@ -51,6 +52,7 @@ func (m applicationModel) Init() tea.Cmd {
 	return tea.Batch(
 		waitForText(m.textChannel),
 		waitForStateChange(m.stateChangeChannel),
+		waitForStatusBar(m.statusBarChannel),
 		runInterpreter(m.zMachine),
 		tea.SetWindowTitle(romFilePath),
 	)
@@ -89,6 +91,9 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.appState = appRunning
 		}
 		return m, waitForStateChange(m.stateChangeChannel)
+	case StatusBarMessage:
+		m.statusBar = zmachine.StatusBar(msg)
+		return m, waitForStatusBar(m.statusBarChannel)
 	}
 
 	if m.appState == appWaitingForInput {
@@ -100,6 +105,11 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m applicationModel) View() string {
 	s := strings.Builder{}
+
+	if m.statusBar.PlaceName != "" {
+		s.WriteString(statusMessageStyle.Render(fmt.Sprintf("%s    Score: %d    Moves: %d", m.statusBar.PlaceName, m.statusBar.Score, m.statusBar.Moves)))
+		s.WriteString(appStyle.Render("\n"))
+	}
 
 	s.WriteString(appStyle.Render(m.outputText))
 
@@ -122,12 +132,18 @@ func waitForStateChange(sub <-chan zmachine.StateChangeRequest) tea.Cmd {
 	}
 }
 
+func waitForStatusBar(sub <-chan zmachine.StatusBar) tea.Cmd {
+	return func() tea.Msg {
+		return StatusBarMessage(<-sub)
+	}
+}
+
 func init() {
 	flag.StringVar(&romFilePath, "rom", "zork1.z1", "The path of a z-machine rom")
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, textOutputChannel <-chan string, stateChangeChannel <-chan zmachine.StateChangeRequest) applicationModel {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, textOutputChannel <-chan string, stateChangeChannel <-chan zmachine.StateChangeRequest, statusBarChannel <-chan zmachine.StatusBar) applicationModel {
 	ti := textinput.New()
 	ti.Focus()
 	ti.CharLimit = 156
@@ -138,6 +154,7 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 		textChannel:        textOutputChannel,
 		sendChannel:        inputChannel,
 		stateChangeChannel: stateChangeChannel,
+		statusBarChannel:   statusBarChannel,
 		zMachine:           zMachine,
 		appState:           appRunning,
 		inputBox:           ti,
@@ -148,14 +165,15 @@ func main() {
 	zMachineTextChannel := make(chan string)
 	zMachineStateChangeChannel := make(chan zmachine.StateChangeRequest)
 	zMachineInputChannel := make(chan string)
+	zMachineStatusBarChannel := make(chan zmachine.StatusBar)
 
 	romFileBytes, err := os.ReadFile(romFilePath)
 	if err != nil {
 		panic(err)
 	}
-	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel)
+	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
 
-	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel)
+	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
 	tui := tea.NewProgram(appModel)
 
 	if _, err := tui.Run(); err != nil {

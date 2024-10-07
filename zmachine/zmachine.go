@@ -12,6 +12,12 @@ import (
 	"github.com/davetcode/goz/zstring"
 )
 
+type StatusBar struct {
+	PlaceName string
+	Score     int
+	Moves     int
+}
+
 type StateChangeRequest int
 
 const (
@@ -74,6 +80,7 @@ type ZMachine struct {
 	textOutputChannel  chan<- string
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
+	statusBarChannel   chan<- StatusBar
 }
 
 func (z *ZMachine) version() uint8           { return z.memory[0] }
@@ -212,12 +219,13 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16) {
 	}
 }
 
-func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest) *ZMachine {
+func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest, statusBarChannel chan<- StatusBar) *ZMachine {
 	machine := ZMachine{
 		memory:             rom,
 		inputChannel:       inputChannel,
 		textOutputChannel:  textOutputChannel,
 		stateChangeChannel: stateChangeChannel,
+		statusBarChannel:   statusBarChannel,
 	}
 
 	// TODO - Is the dictionary static? If not shouldn't cache like this
@@ -459,6 +467,11 @@ func (z *ZMachine) StepMachine() {
 			variable := uint8(opcode.operands[0].Value(z))
 			z.writeVariable(variable, z.readVariable(variable)-1)
 
+		case 7: // PRINT_ADDR
+			address := opcode.operands[0].Value(z)
+			str, _ := zstring.ReadZString(z.memory[address:], z.version())
+			z.appendText(str)
+
 		case 10: // PRINT_OBJ
 			z.appendText(z.getObjectName(opcode.operands[0].Value(z)))
 
@@ -664,6 +677,11 @@ func (z *ZMachine) StepMachine() {
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
 		case 4: // SREAD
+			z.statusBarChannel <- StatusBar{
+				PlaceName: z.getObjectName(z.readVariable(16)),
+				Score:     int(z.readVariable(17)),
+				Moves:     int(z.readVariable(18)),
+			}
 			// TODO - Somehow let UI know how many chars to accept
 			z.stateChangeChannel <- WaitForInput
 			rawText := <-z.inputChannel
