@@ -110,7 +110,7 @@ func (z *ZMachine) getObjectProperty(objId uint16, propertyId uint8) Property {
 
 	// Property not found on object, returning global default for that property
 	defaultTableBase := z.objectTableBase()
-	propertyAddress := defaultTableBase + 2*uint16(propertyId)
+	propertyAddress := defaultTableBase + 2*uint16(propertyId-1)
 	return Property{
 		id:   propertyId,
 		data: z.memory[propertyAddress : propertyAddress+2],
@@ -148,7 +148,7 @@ func (z *ZMachine) getPropertyByAddress(propertyAddr uint32) Property {
 func (z *ZMachine) getObjectName(objId uint16) string {
 	obj := z.getObject(objId)
 
-	name, _ := zstring.ReadZString(z.memory[obj.propertyPointer+1:], z.version())
+	name, _ := zstring.Decode(z.memory[obj.propertyPointer+1:], z.version())
 
 	return name
 }

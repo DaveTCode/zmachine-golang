@@ -1,6 +1,7 @@
 package dictionary
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/davetcode/goz/zstring"
@@ -45,13 +46,13 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8) *Dictiona
 	}
 
 	for ix := 0; ix < int(header.count); ix++ {
-		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)+1]
-		decodedWord, _ := zstring.ReadZString(bytes[entryPtr:], version)
+		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)]
+		decodedWord, _ := zstring.Decode(bytes[entryPtr:], version)
 		entries[ix] = DictionaryEntry{
 			address:     uint16(entryPtr + baseAddress),
 			encodedWord: encodedWord,
 			decodedWord: decodedWord,
-			data:        bytes[entryPtr+uint32(encodedWordLength) : entryPtr+uint32(header.length)+1],
+			data:        bytes[entryPtr+uint32(encodedWordLength) : entryPtr+uint32(header.length)],
 		}
 
 		entryPtr += uint32(header.length)
@@ -63,9 +64,9 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8) *Dictiona
 	}
 }
 
-func (d *Dictionary) Find(zstr string) uint16 {
+func (d *Dictionary) Find(zstr []uint8) uint16 {
 	for _, entry := range d.entries {
-		if entry.decodedWord == zstr {
+		if bytes.Equal(entry.encodedWord, zstr) {
 			return entry.address
 		}
 	}

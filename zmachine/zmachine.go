@@ -297,11 +297,7 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 	offset := int32(branchArg1 & 0b11_1111)
 
 	if !singleByte {
-		sign := int32(1)
-		if (branchArg1>>5)&1 == 1 {
-			sign = -1
-		}
-		offset = sign*int32((branchArg1&0b11_1111)) | int32(z.readIncPC(frame))
+		offset = int32(int16((uint16(branchArg1&0b11_1111)<<8|uint16(z.readIncPC(frame)))<<2) >> 2)
 	}
 
 	if result != branchReversed {
@@ -322,11 +318,11 @@ type word struct {
 	dictionaryAddress uint16
 }
 
-func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictionary.Dictionary) word {
-	// TODO - Description here suggests that the string should be turned back into a z-string for comparison with the dictionary although this might work anyway
-	str := string(bytes)
+func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictionary.Dictionary, version uint8) word {
+	runes := []rune(string(bytes))
+	zstr := zstring.Encode(runes, version)
 
-	dictionaryAddress := dictionary.Find(str)
+	dictionaryAddress := dictionary.Find(zstr)
 
 	return word{
 		bytes:             bytes,
@@ -344,19 +340,20 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	for _, chr := range z.memory[baddr1:] {
 		if z.version() < 5 {
 			if chr == 0 {
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary))
+				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
 				break
 			}
 
 			if chr == ' ' { // space is always a separator
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary))
-				startingLocation = currentLocation
+				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
+				startingLocation = currentLocation + 1
 			} else {
 				for _, separator := range z.dictionary.Header.InputCodes {
 					if chr == separator {
-						words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary))
-						words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary))
+						words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
+						words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version()))
 						startingLocation = currentLocation + 1
+						break
 					}
 				}
 			}
@@ -396,9 +393,15 @@ func (z *ZMachine) appendText(s string) {
 	z.textOutputChannel <- s
 }
 
+var pcHistory = make([]uint32, 100)
+var pcHistoryPtr = 0
+
 func (z *ZMachine) StepMachine() {
-	if z.callStack.peek().pc == 0x5f0f {
-		z.memory[0] = z.memory[0]
+	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
+	pcHistoryPtr = (pcHistoryPtr + 1) % 100
+
+	if z.callStack.peek().pc == 0x5e57 {
+		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
 	opcode := ParseOpcode(z)
@@ -414,12 +417,12 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(0)
 
 		case 2: // PRINT
-			text, bytesRead := zstring.ReadZString(z.memory[frame.pc:], z.version())
+			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version())
 			frame.pc += bytesRead
 			z.appendText(text)
 
 		case 3: // PRINT_RET
-			text, bytesRead := zstring.ReadZString(z.memory[frame.pc:], z.version())
+			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version())
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
@@ -469,7 +472,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
-			str, _ := zstring.ReadZString(z.memory[address:], z.version())
+			str, _ := zstring.Decode(z.memory[address:], z.version())
 			z.appendText(str)
 
 		case 10: // PRINT_OBJ
@@ -486,7 +489,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
-			text, _ := zstring.ReadZString(z.memory[addr:], z.version())
+			text, _ := zstring.Decode(z.memory[addr:], z.version())
 			z.appendText(text)
 
 		case 14: // LOAD
@@ -524,14 +527,14 @@ func (z *ZMachine) StepMachine() {
 		case 4: // DEC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
 			z.writeVariable(variable, z.readVariable(variable)-1)
-			branch := z.readVariable(variable) < opcode.operands[1].Value(z)
+			branch := int16(z.readVariable(variable)) < int16(opcode.operands[1].Value(z))
 
 			z.handleBranch(frame, branch)
 
 		case 5: // INC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
 			z.writeVariable(variable, z.readVariable(variable)+1)
-			branch := z.readVariable(variable) > opcode.operands[1].Value(z)
+			branch := int16(z.readVariable(variable)) > int16(opcode.operands[1].Value(z))
 
 			z.handleBranch(frame, branch)
 
