@@ -349,7 +349,7 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	}
 	currentLocation := startingLocation
 
-	for _, chr := range z.memory[baddr1:] {
+	for _, chr := range z.memory[startingLocation:] {
 		if (z.version() < 5 && chr == 0) || (z.version() >= 5 && currentLocation-startingLocation >= chrCount) {
 			words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
 			break
@@ -483,7 +483,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 
 	if z.version() >= 5 {
-		z.writeVariable(z.readIncPC(z.callStack.peek()), uint16(rawTextBytes[ix-1]))
+		z.writeVariable(z.readIncPC(z.callStack.peek()), 13) // TODO - Should be the typed terminating char
 	}
 }
 
