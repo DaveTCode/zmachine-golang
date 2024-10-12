@@ -77,6 +77,7 @@ type ZMachine struct {
 	memory             []uint8
 	dictionary         *dictionary.Dictionary
 	rng                rand.Rand
+	alphabets          *zstring.Alphabets
 	textOutputChannel  chan<- string
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
@@ -228,8 +229,11 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 		statusBarChannel:   statusBarChannel,
 	}
 
+	// Load custom alphabets on v5+
+	machine.alphabets = zstring.LoadAlphabets(machine.version(), rom, machine.alternativeCharSetBaseAddress())
+
 	// TODO - Is the dictionary static? If not shouldn't cache like this
-	machine.dictionary = dictionary.ParseDictionary(machine.memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.version())
+	machine.dictionary = dictionary.ParseDictionary(machine.memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.version(), machine.alphabets)
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.version() >= 6 {
@@ -249,12 +253,15 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	return &machine
 }
 
-func (z *ZMachine) call(opcode *Opcode) {
+func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 	routineAddress := z.packedAddress(uint32(opcode.operands[0].Value(z)), false)
 
 	// Special case, if routine address is 0 then no call is made and 0 is stored in the return address
 	if routineAddress == 0 {
-		z.writeVariable(z.readIncPC(z.callStack.peek()), 0)
+		if routineType == function {
+			z.writeVariable(z.readIncPC(z.callStack.peek()), 0)
+		}
+
 		return
 	}
 
@@ -283,7 +290,7 @@ func (z *ZMachine) call(opcode *Opcode) {
 		pc:              routineAddress,
 		locals:          locals,
 		routineStack:    make([]uint16, 0),
-		routineType:     procedure, // TODO - Not really sure what this is, v3+ only
+		routineType:     routineType, // TODO - Not really sure what this is, v3+ only
 		numValuesPassed: len(opcode.operands),
 		framePointer:    0, // TODO - Only used for try/catch in later versions
 	})
@@ -318,9 +325,9 @@ type word struct {
 	dictionaryAddress uint16
 }
 
-func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictionary.Dictionary, version uint8) word {
+func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictionary.Dictionary, version uint8, alphabets *zstring.Alphabets) word {
 	runes := []rune(string(bytes))
-	zstr := zstring.Encode(runes, version)
+	zstr := zstring.Encode(runes, version, alphabets)
 
 	dictionaryAddress := dictionary.Find(zstr)
 
@@ -340,18 +347,18 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	for _, chr := range z.memory[baddr1:] {
 		if z.version() < 5 {
 			if chr == 0 {
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
+				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
 				break
 			}
 
 			if chr == ' ' { // space is always a separator
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
+				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
 				startingLocation = currentLocation + 1
 			} else {
 				for _, separator := range z.dictionary.Header.InputCodes {
 					if chr == separator {
-						words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version()))
-						words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version()))
+						words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+						words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version(), z.alphabets))
 						startingLocation = currentLocation + 1
 						break
 					}
@@ -382,11 +389,13 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 }
 
 func (z *ZMachine) retValue(val uint16) {
-	z.callStack.pop()
+	oldFrame := z.callStack.pop()
 	newFrame := z.callStack.peek()
 
-	destination := z.readIncPC(newFrame)
-	z.writeVariable(destination, val)
+	if oldFrame.routineType == function {
+		destination := z.readIncPC(newFrame)
+		z.writeVariable(destination, val)
+	}
 }
 
 func (z *ZMachine) appendText(s string) {
@@ -400,7 +409,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc == 0x5e57 {
+	if z.callStack.peek().pc == 0x5d8d {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
@@ -417,12 +426,12 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(0)
 
 		case 2: // PRINT
-			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version())
+			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version(), z.alphabets)
 			frame.pc += bytesRead
 			z.appendText(text)
 
 		case 3: // PRINT_RET
-			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version())
+			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version(), z.alphabets)
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
@@ -459,8 +468,8 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), z.getObject(opcode.operands[0].Value(z)).parent)
 
 		case 4: // GET_PROP_LEN
-			property := z.getPropertyByAddress(uint32(opcode.operands[0].Value(z) - 1))
-			z.writeVariable(z.readIncPC(frame), uint16(property.length))
+			addr := opcode.operands[0].Value(z)
+			z.writeVariable(z.readIncPC(frame), GetPropertyLength(z.memory, uint32(addr), z.version()))
 
 		case 5: // INC
 			variable := uint8(opcode.operands[0].Value(z))
@@ -472,7 +481,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
-			str, _ := zstring.Decode(z.memory[address:], z.version())
+			str, _ := zstring.Decode(z.memory[address:], z.version(), z.alphabets)
 			z.appendText(str)
 
 		case 10: // PRINT_OBJ
@@ -489,12 +498,20 @@ func (z *ZMachine) StepMachine() {
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
-			text, _ := zstring.Decode(z.memory[addr:], z.version())
+			text, _ := zstring.Decode(z.memory[addr:], z.version(), z.alphabets)
 			z.appendText(text)
 
 		case 14: // LOAD
 			value := opcode.operands[0].Value(z)
 			z.writeVariable(z.readIncPC(frame), z.readVariable(uint8(value)))
+
+		case 15: // NOT or CALL_1n
+			if z.version() < 5 {
+				val := opcode.operands[0].Value(z)
+				z.writeVariable(z.readIncPC(frame), ^val)
+			} else {
+				z.call(&opcode, procedure)
+			}
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 		}
@@ -600,7 +617,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 18: // GET_PROP_ADDR
 			prop := z.getObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)))
-			z.writeVariable(z.readIncPC(frame), prop.address+1)
+			z.writeVariable(z.readIncPC(frame), uint16(prop.dataAddress))
 
 		case 19:
 			// TODO - get_next_prop
@@ -635,13 +652,15 @@ func (z *ZMachine) StepMachine() {
 			if z.version() < 4 {
 				panic("Invalid call_2s routine on v1-3")
 			}
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 
-		case 26: // call_2n
+			z.call(&opcode, function)
+
+		case 26: // CALL_2n
 			if z.version() < 5 {
 				panic("Invalid call_2s routine on v1-4")
 			}
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+
+			z.call(&opcode, procedure)
 
 		case 27: // set_colour
 			if z.version() < 5 {
@@ -665,7 +684,7 @@ func (z *ZMachine) StepMachine() {
 	case VAR:
 		switch opcode.opcodeNumber {
 		case 0: // CALL
-			z.call(&opcode)
+			z.call(&opcode, function)
 
 		case 1: // STOREW
 			address := opcode.operands[0].Value(z) + 2*opcode.operands[1].Value(z)
@@ -680,11 +699,14 @@ func (z *ZMachine) StepMachine() {
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
 		case 4: // SREAD
-			z.statusBarChannel <- StatusBar{
-				PlaceName: z.getObjectName(z.readVariable(16)),
-				Score:     int(z.readVariable(17)),
-				Moves:     int(z.readVariable(18)),
+			if z.version() <= 3 { // TODO - Not really sure if this is true
+				z.statusBarChannel <- StatusBar{
+					PlaceName: z.getObjectName(z.readVariable(16)),
+					Score:     int(z.readVariable(17)),
+					Moves:     int(z.readVariable(18)),
+				}
 			}
+
 			// TODO - Somehow let UI know how many chars to accept
 			z.stateChangeChannel <- WaitForInput
 			rawText := <-z.inputChannel
@@ -731,6 +753,13 @@ func (z *ZMachine) StepMachine() {
 
 		case 9: // PULL
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop())
+
+		case 17: // SET_TEXT_STYLE
+			if z.version() >= 4 {
+				// TODO - Handle set_text_style
+			} else {
+				panic("Can't set text style on version <=4")
+			}
 
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))

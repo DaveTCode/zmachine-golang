@@ -5,10 +5,36 @@ import (
 	"slices"
 )
 
-var a0_default = []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
-var a1_default = []rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
-var a2_v1 = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '<', '-', ':', '(', ')'}
-var a2_v2_default = []rune{'\n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '-', ':', '(', ')'}
+type Alphabets struct {
+	a0 []rune
+	a1 []rune
+	a2 []rune
+}
+
+var defaultAlphabetsV1 = Alphabets{
+	a0: []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'},
+	a1: []rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'},
+	a2: []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '<', '-', ':', '(', ')'},
+}
+
+var defaultAlphabetsV2 = Alphabets{
+	a0: []rune{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'},
+	a1: []rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'},
+	a2: []rune{'\n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '-', ':', '(', ')'},
+}
+
+func LoadAlphabets(version uint8, memory []uint8, customAlphabetBase uint16) *Alphabets {
+	if version == 1 {
+		return &defaultAlphabetsV1
+	} else if version < 5 {
+		return &defaultAlphabetsV2
+	} else if customAlphabetBase == 0 {
+		return &defaultAlphabetsV2
+	} else {
+		panic("TODO - Load custom alphabet")
+	}
+}
+
 var coreUnicodeTranslationTable = map[rune]uint8{
 	'!':  0x21,
 	'"':  0x22,
@@ -189,7 +215,7 @@ const (
 // translates them to a z-string.
 // In theory this should be the inverse of the zstring.Decode function although
 // in practice strings can be constructed for which this isn't true
-func Encode(s []rune, version uint8) []uint8 {
+func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
 	zchrs := make([]uint8, 0)
 
 	// The version decides how many zchrs are allowed, we must pad and truncate to get exactly this value
@@ -212,17 +238,14 @@ func Encode(s []rune, version uint8) []uint8 {
 			continue
 		}
 
-		if slices.Contains(a0_default, chr) {
-			zchrs = append(zchrs, 6+uint8(slices.Index(a0_default, chr)))
-		} else if slices.Contains(a1_default, chr) {
+		if slices.Contains(alphabets.a0, chr) {
+			zchrs = append(zchrs, 6+uint8(slices.Index(alphabets.a0, chr)))
+		} else if slices.Contains(alphabets.a1, chr) {
 			zchrs = append(zchrs, shiftA1)
-			zchrs = append(zchrs, 6+uint8(slices.Index(a1_default, chr)))
-		} else if version == 1 && slices.Contains(a2_v1, chr) {
+			zchrs = append(zchrs, 6+uint8(slices.Index(alphabets.a1, chr)))
+		} else if slices.Contains(alphabets.a2, chr) {
 			zchrs = append(zchrs, shiftA2)
-			zchrs = append(zchrs, 7+uint8(slices.Index(a2_v1, chr)))
-		} else if slices.Contains(a2_v2_default, chr) {
-			zchrs = append(zchrs, shiftA2)
-			zchrs = append(zchrs, 7+uint8(slices.Index(a2_v2_default, chr)))
+			zchrs = append(zchrs, 7+uint8(slices.Index(alphabets.a2, chr)))
 		} else {
 			// ZSCII character or invalid
 			zchrs = append(zchrs, shiftA2)
@@ -271,7 +294,7 @@ func Encode(s []rune, version uint8) []uint8 {
 	return bytes
 }
 
-func Decode(bytes []uint8, version uint8) (string, uint32) {
+func Decode(bytes []uint8, version uint8, alphabets *Alphabets) (string, uint32) {
 	bytesRead := uint32(0)
 	ptr := 0
 	baseAlphabet := a0
@@ -347,25 +370,11 @@ func Decode(bytes []uint8, version uint8) (string, uint32) {
 			} else {
 				switch currentAlphabet {
 				case a0:
-					if version <= 4 {
-						chrStream = append(chrStream, uint8(a0_default[zchr-6]))
-					} else {
-						panic("TODO - Handle custom alphabets")
-					}
+					chrStream = append(chrStream, uint8(alphabets.a0[zchr-6]))
 				case a1:
-					if version <= 4 {
-						chrStream = append(chrStream, uint8(a1_default[zchr-6]))
-					} else {
-						panic("TODO - Handle custom alphabets")
-					}
+					chrStream = append(chrStream, uint8(alphabets.a1[zchr-6]))
 				case a2:
-					if version == 1 {
-						chrStream = append(chrStream, uint8(a2_v1[zchr-7]))
-					} else if version <= 4 {
-						chrStream = append(chrStream, uint8(a2_v2_default[zchr-7]))
-					} else {
-						panic("TODO - Handle custom alphabets")
-					}
+					chrStream = append(chrStream, uint8(alphabets.a2[zchr-7]))
 				}
 			}
 		}

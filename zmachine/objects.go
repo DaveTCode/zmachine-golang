@@ -22,7 +22,8 @@ type Property struct {
 	length               uint8
 	data                 []uint8
 	propertyHeaderLength uint8
-	address              uint16
+	address              uint32
+	dataAddress          uint32
 }
 
 func (z *ZMachine) moveObject(objId uint16, newParent uint16) {
@@ -121,14 +122,12 @@ func (z *ZMachine) getPropertyByAddress(propertyAddr uint32) Property {
 	propertySizeByte := z.readByte(propertyAddr)
 	length := (propertySizeByte >> 5) + 1
 	id := propertySizeByte & 0b1_1111
-	data := z.memory[propertyAddr+1 : propertyAddr+1+uint32(length)]
 	propertyHeaderLength := uint8(1)
 
 	if z.version() >= 4 {
 		if propertySizeByte>>7 == 1 {
 			length = (z.readByte(propertyAddr+1) & 0b11_1111) + 1
 			id = propertySizeByte & 0b11_1111
-			data = z.memory[propertyAddr+2 : propertyAddr+2+uint32(length)]
 			propertyHeaderLength = 2
 		} else {
 			length = ((propertySizeByte >> 6) & 1) + 1
@@ -136,19 +135,44 @@ func (z *ZMachine) getPropertyByAddress(propertyAddr uint32) Property {
 		}
 	}
 
+	dataAddress := propertyAddr + uint32(propertyHeaderLength)
+
 	return Property{
 		id:                   id,
 		length:               length,
-		data:                 data,
+		data:                 z.memory[dataAddress : dataAddress+uint32(length)],
 		propertyHeaderLength: propertyHeaderLength,
-		address:              uint16(propertyAddr),
+		address:              propertyAddr,
+		dataAddress:          dataAddress,
+	}
+}
+
+// Property length is requested by the address of the first byte of the data
+// This function therefore works back from that to find the property length
+// based on the flags set on the property size byte(s)
+func GetPropertyLength(memory []uint8, addr uint32, version uint8) uint16 {
+	if addr == 0 {
+		return 0 // Special case required by some story files
+	}
+
+	prevByte := memory[addr-1]
+	if version <= 3 {
+		return uint16(prevByte>>5) + 1
+	} else if prevByte&0b1000_0000 != 0 {
+		return uint16(prevByte & 0b11_1111)
+	} else {
+		if memory[addr-2]&0b100_0000 == 0 {
+			return 1
+		} else {
+			return 2
+		}
 	}
 }
 
 func (z *ZMachine) getObjectName(objId uint16) string {
 	obj := z.getObject(objId)
 
-	name, _ := zstring.Decode(z.memory[obj.propertyPointer+1:], z.version())
+	name, _ := zstring.Decode(z.memory[obj.propertyPointer+1:], z.version(), z.alphabets)
 
 	return name
 }

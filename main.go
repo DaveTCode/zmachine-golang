@@ -71,6 +71,10 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			os.Exit(0)
+		}
+
 		switch msg.Type {
 		case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
 			m.appState = appRunning
