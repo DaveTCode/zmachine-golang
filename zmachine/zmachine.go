@@ -341,31 +341,32 @@ func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictiona
 func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	bytesRead := 0
 	words := make([]word, 0)
-	startingLocation := baddr1
+	startingLocation := baddr1 + 1 // Skip byte which has max length of string in it
+	chrCount := uint32(0)
+	if z.version() >= 5 {
+		chrCount = uint32(z.readByte(startingLocation))
+		startingLocation++
+	}
 	currentLocation := startingLocation
 
 	for _, chr := range z.memory[baddr1:] {
-		if z.version() < 5 {
-			if chr == 0 {
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
-				break
-			}
+		if (z.version() < 5 && chr == 0) || (z.version() >= 5 && currentLocation-startingLocation >= chrCount) {
+			words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+			break
+		}
 
-			if chr == ' ' { // space is always a separator
-				words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
-				startingLocation = currentLocation + 1
-			} else {
-				for _, separator := range z.dictionary.Header.InputCodes {
-					if chr == separator {
-						words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
-						words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version(), z.alphabets))
-						startingLocation = currentLocation + 1
-						break
-					}
+		if chr == ' ' { // space is always a separator
+			words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+			startingLocation = currentLocation + 1
+		} else {
+			for _, separator := range z.dictionary.Header.InputCodes {
+				if chr == separator {
+					words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+					words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version(), z.alphabets))
+					startingLocation = currentLocation + 1
+					break
 				}
 			}
-		} else {
-			panic("TODO - Handle tokenise on v5+")
 		}
 
 		currentLocation += 1
@@ -402,6 +403,90 @@ func (z *ZMachine) appendText(s string) {
 	z.textOutputChannel <- s
 }
 
+func (z *ZMachine) read(opcode *Opcode) {
+	if z.version() <= 3 { // TODO - Not really sure if this is true
+		z.statusBarChannel <- StatusBar{
+			PlaceName: z.getObjectName(z.readVariable(16)),
+			Score:     int(z.readVariable(17)),
+			Moves:     int(z.readVariable(18)),
+		}
+	}
+
+	// In V5+ a custom set of terminating characters can be stored in memory
+	validTerminators := []uint8{'\n'}
+	if z.version() >= 5 {
+		if z.terminatingCharTableBase() != 0 {
+			//panic("TODO - Don't use this yet so panic and fix if you find a story file with this set")
+			terminatingChrPtr := z.terminatingCharTableBase()
+			for {
+				b := z.readByte(uint32(terminatingChrPtr))
+				if b == 0 {
+					break
+				} else if (b >= 129 && b <= 154) || (b >= 252 && b <= 254) {
+					validTerminators = append(validTerminators, b)
+				} else if b == 255 { // Special case means "all function keys are terminators"
+					validTerminators = []uint8{'\n', 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 252, 253, 254}
+					break
+				}
+
+				terminatingChrPtr++
+			}
+		}
+	}
+
+	// TODO - Handle timed interrupts of the read function
+	// TODO - Somehow let UI know how many chars to accept
+	z.stateChangeChannel <- WaitForInput
+	rawText := <-z.inputChannel
+	textBufferPtr := opcode.operands[0].Value(z)
+	parseBufferPtr := opcode.operands[1].Value(z)
+
+	rawTextBytes := []byte(strings.ToLower(rawText))
+
+	bufferSize := z.readByte(uint32(textBufferPtr))
+	textBufferPtr++
+
+	// Skip bytes already in the buffer on v5+
+	if z.version() >= 5 {
+		existingBytes := z.readByte(uint32(textBufferPtr))
+		textBufferPtr += 1 + uint16(existingBytes)
+	}
+
+	ix := 0
+	for {
+		if ix > int(bufferSize) || ix >= len(rawTextBytes) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
+			break // Too many characters provided
+		}
+
+		chr := rawTextBytes[ix]
+
+		if (chr >= 32 && chr <= 126) || (chr >= 155 && chr <= 251) {
+			z.writeByte(uint32(textBufferPtr+uint16(ix)), chr)
+		} else {
+			z.writeByte(uint32(textBufferPtr+uint16(ix)), 32)
+		}
+
+		ix++
+	}
+
+	// Terminate with a null byte
+	z.writeByte(uint32(textBufferPtr+uint16(ix)), 0)
+
+	// Need to store the number of bytes in total in v5+ as that's used to determine end point of the string
+	if z.version() >= 5 {
+		z.writeByte(uint32(opcode.operands[0].Value(z)+1), uint8(ix))
+	}
+
+	// TODO - Can this ever really be zero?
+	if parseBufferPtr != 0 {
+		z.Tokenise(uint32(opcode.operands[0].Value(z)), uint32(parseBufferPtr))
+	}
+
+	if z.version() >= 5 {
+		z.writeVariable(z.readIncPC(z.callStack.peek()), uint16(rawTextBytes[ix-1]))
+	}
+}
+
 var pcHistory = make([]uint32, 100)
 var pcHistoryPtr = 0
 
@@ -409,7 +494,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc == 0x5d8d {
+	if z.callStack.peek().pc == 0x11bd {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
@@ -440,6 +525,9 @@ func (z *ZMachine) StepMachine() {
 		case 8: // RET_POPPED
 			v := frame.pop()
 			z.retValue(v)
+
+		case 10: // QUIT
+			panic("TODO - Quit properly by passing information back to the calling function and tea")
 
 		case 11: // NEWLINE
 			z.appendText("\n")
@@ -699,35 +787,7 @@ func (z *ZMachine) StepMachine() {
 			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
 
 		case 4: // SREAD
-			if z.version() <= 3 { // TODO - Not really sure if this is true
-				z.statusBarChannel <- StatusBar{
-					PlaceName: z.getObjectName(z.readVariable(16)),
-					Score:     int(z.readVariable(17)),
-					Moves:     int(z.readVariable(18)),
-				}
-			}
-
-			// TODO - Somehow let UI know how many chars to accept
-			z.stateChangeChannel <- WaitForInput
-			rawText := <-z.inputChannel
-			textBufferPtr := opcode.operands[0].Value(z)
-			parseBufferPtr := opcode.operands[1].Value(z)
-
-			bufferSize := z.readByte(uint32(textBufferPtr))
-			rawTextBytes := []byte(strings.ToLower(rawText))
-			for ix, chr := range rawTextBytes {
-				if ix > int(bufferSize) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
-					break // Too many characters provided
-				}
-
-				if (chr >= 32 && chr <= 126) || (chr >= 155 && chr <= 251) {
-					z.writeByte(uint32(textBufferPtr+uint16(ix)), chr)
-				} else {
-					z.writeByte(uint32(textBufferPtr+uint16(ix)), 32)
-				}
-			}
-
-			z.Tokenise(uint32(textBufferPtr), uint32(parseBufferPtr))
+			z.read(&opcode)
 
 		case 5: // PRINT_CHAR
 			z.appendText(string(uint8(opcode.operands[0].Value(z))))

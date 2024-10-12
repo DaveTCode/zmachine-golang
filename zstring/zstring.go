@@ -255,10 +255,10 @@ func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
 				zchrs = append(zchrs, zchr>>5)
 				zchrs = append(zchrs, zchr&0b1_1111)
 			} else {
-				if version >= 5 {
-					// TODO - Handle passing through a custom unicode translation table on V5 if one is set in the story file
-					panic("We don't handle custom unicode dictionaries yet")
-				}
+				// if version >= 5 {
+				// 	// TODO - Handle passing through a custom unicode translation table on V5 if one is set in the story file
+				// 	panic("We don't handle custom unicode dictionaries yet")
+				// }
 				if zchr, ok := defaultUnicodeTranslationTable[chr]; ok {
 					zchrs = append(zchrs, zchr>>5)
 					zchrs = append(zchrs, zchr&0b1_1111)
