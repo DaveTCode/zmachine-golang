@@ -158,7 +158,7 @@ func GetPropertyLength(memory []uint8, addr uint32, version uint8) uint16 {
 	prevByte := memory[addr-1]
 	if version <= 3 {
 		return uint16(prevByte>>5) + 1
-	} else if prevByte&0b1000_0000 != 0 {
+	} else if memory[addr-2]&0b1000_0000 != 0 {
 		return uint16(prevByte & 0b11_1111)
 	} else {
 		if memory[addr-2]&0b100_0000 == 0 {
