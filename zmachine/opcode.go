@@ -99,7 +99,7 @@ func ParseOpcode(z *ZMachine) Opcode {
 		case 0b11: // Ommitted
 			opcode.operandCount = OP0
 		}
-	} else if opcodeByte == 0xbe && z.version() >= 5 {
+	} else if opcodeByte == 0xbe && z.Version() >= 5 {
 		opcode.opcodeNumber = z.readIncPC(frame)
 		opcode.opcodeForm = extForm
 		opcode.operandCount = EXT

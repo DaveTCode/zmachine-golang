@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/davetcode/goz/dictionary"
+	"github.com/davetcode/goz/zobject"
 	"github.com/davetcode/goz/zstring"
 )
 
@@ -74,77 +75,77 @@ func (s *CallStack) peek() *CallStackFrame {
 
 type ZMachine struct {
 	callStack          CallStack
-	memory             []uint8
+	Memory             []uint8
 	dictionary         *dictionary.Dictionary
 	rng                rand.Rand
-	alphabets          *zstring.Alphabets
+	Alphabets          *zstring.Alphabets
 	textOutputChannel  chan<- string
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
 	statusBarChannel   chan<- StatusBar
 }
 
-func (z *ZMachine) version() uint8           { return z.memory[0] }
-func (z *ZMachine) flagByte1() uint8         { return z.memory[0x01] }
-func (z *ZMachine) releaseNumber() uint16    { return binary.BigEndian.Uint16(z.memory[0x02:0x04]) }
-func (z *ZMachine) pagedMemoryBase() uint16  { return binary.BigEndian.Uint16(z.memory[0x04:0x06]) }
-func (z *ZMachine) firstInstruction() uint16 { return binary.BigEndian.Uint16(z.memory[0x06:0x08]) }
-func (z *ZMachine) dictionaryBase() uint16   { return binary.BigEndian.Uint16(z.memory[0x08:0x0a]) }
-func (z *ZMachine) objectTableBase() uint16  { return binary.BigEndian.Uint16(z.memory[0x0a:0x0c]) }
+func (z *ZMachine) Version() uint8           { return z.Memory[0] }
+func (z *ZMachine) flagByte1() uint8         { return z.Memory[0x01] }
+func (z *ZMachine) releaseNumber() uint16    { return binary.BigEndian.Uint16(z.Memory[0x02:0x04]) }
+func (z *ZMachine) pagedMemoryBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x04:0x06]) }
+func (z *ZMachine) firstInstruction() uint16 { return binary.BigEndian.Uint16(z.Memory[0x06:0x08]) }
+func (z *ZMachine) dictionaryBase() uint16   { return binary.BigEndian.Uint16(z.Memory[0x08:0x0a]) }
+func (z *ZMachine) ObjectTableBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x0a:0x0c]) }
 func (z *ZMachine) globalVariableBase() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x0c:0x0e])
+	return binary.BigEndian.Uint16(z.Memory[0x0c:0x0e])
 }
-func (z *ZMachine) staticMemoryBase() uint16 { return binary.BigEndian.Uint16(z.memory[0x0e:0x10]) }
-func (z *ZMachine) flagByte2() uint8         { return z.memory[0x10] }
-func (z *ZMachine) flagByte3() uint8         { return z.memory[0x11] }
-func (z *ZMachine) serialCode() []uint8      { return z.memory[0x12:0x18] }
+func (z *ZMachine) staticMemoryBase() uint16 { return binary.BigEndian.Uint16(z.Memory[0x0e:0x10]) }
+func (z *ZMachine) flagByte2() uint8         { return z.Memory[0x10] }
+func (z *ZMachine) flagByte3() uint8         { return z.Memory[0x11] }
+func (z *ZMachine) serialCode() []uint8      { return z.Memory[0x12:0x18] }
 func (z *ZMachine) abbreviationTableBase() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x18:0x1a])
+	return binary.BigEndian.Uint16(z.Memory[0x18:0x1a])
 }
-func (z *ZMachine) fileLengthDiv() uint16               { return binary.BigEndian.Uint16(z.memory[0x1a:0x1c]) }
-func (z *ZMachine) fileChecksum() uint16                { return binary.BigEndian.Uint16(z.memory[0x1c:0x1e]) }
-func (z *ZMachine) interpreterNumber() uint8            { return z.memory[0x1e] }
-func (z *ZMachine) interpreterVersion() uint8           { return z.memory[0x1f] }
-func (z *ZMachine) screenHeightLines() uint8            { return z.memory[0x20] }
-func (z *ZMachine) screenWidthChars() uint8             { return z.memory[0x21] }
-func (z *ZMachine) screenWidthUnits() uint16            { return binary.BigEndian.Uint16(z.memory[0x22:0x24]) }
-func (z *ZMachine) screenHeightUnits() uint16           { return binary.BigEndian.Uint16(z.memory[0x24:0x26]) }
-func (z *ZMachine) fontHeight() uint8                   { return z.memory[0x26] }
-func (z *ZMachine) fontWidth() uint8                    { return z.memory[0x27] }
-func (z *ZMachine) routinesOffset() uint16              { return binary.BigEndian.Uint16(z.memory[0x28:0x2a]) }
-func (z *ZMachine) stringOffset() uint16                { return binary.BigEndian.Uint16(z.memory[0x2a:0x2c]) }
-func (z *ZMachine) defaultBackgroundColorNumber() uint8 { return z.memory[0x2c] }
-func (z *ZMachine) defaultForegroundColorNumber() uint8 { return z.memory[0x2d] }
+func (z *ZMachine) fileLengthDiv() uint16               { return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) }
+func (z *ZMachine) fileChecksum() uint16                { return binary.BigEndian.Uint16(z.Memory[0x1c:0x1e]) }
+func (z *ZMachine) interpreterNumber() uint8            { return z.Memory[0x1e] }
+func (z *ZMachine) interpreterVersion() uint8           { return z.Memory[0x1f] }
+func (z *ZMachine) screenHeightLines() uint8            { return z.Memory[0x20] }
+func (z *ZMachine) screenWidthChars() uint8             { return z.Memory[0x21] }
+func (z *ZMachine) screenWidthUnits() uint16            { return binary.BigEndian.Uint16(z.Memory[0x22:0x24]) }
+func (z *ZMachine) screenHeightUnits() uint16           { return binary.BigEndian.Uint16(z.Memory[0x24:0x26]) }
+func (z *ZMachine) fontHeight() uint8                   { return z.Memory[0x26] }
+func (z *ZMachine) fontWidth() uint8                    { return z.Memory[0x27] }
+func (z *ZMachine) routinesOffset() uint16              { return binary.BigEndian.Uint16(z.Memory[0x28:0x2a]) }
+func (z *ZMachine) stringOffset() uint16                { return binary.BigEndian.Uint16(z.Memory[0x2a:0x2c]) }
+func (z *ZMachine) defaultBackgroundColorNumber() uint8 { return z.Memory[0x2c] }
+func (z *ZMachine) defaultForegroundColorNumber() uint8 { return z.Memory[0x2d] }
 func (z *ZMachine) terminatingCharTableBase() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x2e:0x30])
+	return binary.BigEndian.Uint16(z.Memory[0x2e:0x30])
 }
 func (z *ZMachine) outputStream3Width() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x30:0x32])
+	return binary.BigEndian.Uint16(z.Memory[0x30:0x32])
 }
 func (z *ZMachine) standardRevisionNumber() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x32:0x34])
+	return binary.BigEndian.Uint16(z.Memory[0x32:0x34])
 }
 func (z *ZMachine) alternativeCharSetBaseAddress() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x34:0x36])
+	return binary.BigEndian.Uint16(z.Memory[0x34:0x36])
 }
 func (z *ZMachine) extensionTableBaseAddress() uint16 {
-	return binary.BigEndian.Uint16(z.memory[0x36:0x38])
+	return binary.BigEndian.Uint16(z.Memory[0x36:0x38])
 }
-func (z *ZMachine) playerLoginName() []uint8 { return z.memory[0x38:0x40] }
+func (z *ZMachine) playerLoginName() []uint8 { return z.Memory[0x38:0x40] }
 
 func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 {
 	switch {
-	case z.version() < 4:
+	case z.Version() < 4:
 		return 2 * originalAddress
-	case z.version() < 6:
+	case z.Version() < 6:
 		return 4 * originalAddress
-	case z.version() < 8:
+	case z.Version() < 8:
 		offset := z.routinesOffset()
 		if isZString {
 			offset = z.stringOffset()
 		}
 		return 4*originalAddress + 8*uint32(offset)
-	case z.version() == 8:
+	case z.Version() == 8:
 		return 8 * originalAddress
 	default:
 		panic("Invalid rom version")
@@ -164,21 +165,21 @@ func (z *ZMachine) readHalfWordIncPC(frame *CallStackFrame) uint16 {
 }
 
 func (z *ZMachine) readByte(address uint32) uint8 {
-	return z.memory[address]
+	return z.Memory[address]
 }
 
 func (z *ZMachine) writeByte(address uint32, value uint8) {
 	// TODO - Lots of the memory is read only, need to add validation here
-	z.memory[address] = value
+	z.Memory[address] = value
 }
 
 func (z *ZMachine) readHalfWord(address uint32) uint16 {
-	return binary.BigEndian.Uint16(z.memory[address : address+2])
+	return binary.BigEndian.Uint16(z.Memory[address : address+2])
 }
 
 func (z *ZMachine) writeHalfWord(address uint32, value uint16) {
 	// TODO - Lots of the memory is read only, need to add validation here
-	binary.BigEndian.PutUint16(z.memory[address:address+2], value)
+	binary.BigEndian.PutUint16(z.Memory[address:address+2], value)
 }
 
 func (z *ZMachine) readVariable(variable uint8) uint16 {
@@ -222,7 +223,7 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16) {
 
 func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest, statusBarChannel chan<- StatusBar) *ZMachine {
 	machine := ZMachine{
-		memory:             rom,
+		Memory:             rom,
 		inputChannel:       inputChannel,
 		textOutputChannel:  textOutputChannel,
 		stateChangeChannel: stateChangeChannel,
@@ -230,18 +231,18 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	}
 
 	// Load custom alphabets on v5+
-	machine.alphabets = zstring.LoadAlphabets(machine.version(), rom, machine.alternativeCharSetBaseAddress())
+	machine.Alphabets = zstring.LoadAlphabets(machine.Version(), rom, machine.alternativeCharSetBaseAddress())
 
 	// TODO - Is the dictionary static? If not shouldn't cache like this
-	machine.dictionary = dictionary.ParseDictionary(machine.memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.version(), machine.alphabets)
+	machine.dictionary = dictionary.ParseDictionary(machine.Memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.Version(), machine.Alphabets)
 
 	// V6+ uses a packed address and a routine for the initial function
-	if machine.version() >= 6 {
+	if machine.Version() >= 6 {
 		packedAddress := machine.packedAddress(uint32(machine.firstInstruction()), false)
 
 		machine.callStack.push(CallStackFrame{
 			pc:     packedAddress + 1,
-			locals: make([]uint16, machine.memory[packedAddress]),
+			locals: make([]uint16, machine.Memory[packedAddress]),
 		})
 	} else {
 		machine.callStack.push(CallStackFrame{
@@ -276,12 +277,12 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 			locals[i] = opcode.operands[i+1].Value(z)
 		} else {
 			// No value passed to routine, use default
-			if z.version() < 5 {
+			if z.Version() < 5 {
 				locals[i] = z.readHalfWord(routineAddress)
 			}
 		}
 
-		if z.version() < 5 {
+		if z.Version() < 5 {
 			routineAddress += 2
 		}
 	}
@@ -291,7 +292,7 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 		locals:          locals,
 		routineStack:    make([]uint16, 0),
 		routineType:     routineType, // TODO - Not really sure what this is, v3+ only
-		numValuesPassed: len(opcode.operands),
+		numValuesPassed: len(opcode.operands) - 1,
 		framePointer:    0, // TODO - Only used for try/catch in later versions
 	})
 }
@@ -343,26 +344,26 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 	words := make([]word, 0)
 	startingLocation := baddr1 + 1 // Skip byte which has max length of string in it
 	chrCount := uint32(0)
-	if z.version() >= 5 {
+	if z.Version() >= 5 {
 		chrCount = uint32(z.readByte(startingLocation))
 		startingLocation++
 	}
 	currentLocation := startingLocation
 
-	for _, chr := range z.memory[startingLocation:] {
-		if (z.version() < 5 && chr == 0) || (z.version() >= 5 && currentLocation-startingLocation >= chrCount) {
-			words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+	for _, chr := range z.Memory[startingLocation:] {
+		if (z.Version() < 5 && chr == 0) || (z.Version() >= 5 && currentLocation-startingLocation >= chrCount) {
+			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
 			break
 		}
 
 		if chr == ' ' { // space is always a separator
-			words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
+			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
 			startingLocation = currentLocation + 1
 		} else {
 			for _, separator := range z.dictionary.Header.InputCodes {
 				if chr == separator {
-					words = append(words, tokeniseSingleWord(z.memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.version(), z.alphabets))
-					words = append(words, tokeniseSingleWord(z.memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.version(), z.alphabets))
+					words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
+					words = append(words, tokeniseSingleWord(z.Memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.Version(), z.Alphabets))
 					startingLocation = currentLocation + 1
 					break
 				}
@@ -399,14 +400,46 @@ func (z *ZMachine) retValue(val uint16) {
 	}
 }
 
+func (z *ZMachine) moveObject(objId uint16, newParent uint16) {
+	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+	oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+
+	// Remove from old location in the sibling chain
+	if oldParent.Child == object.Id {
+		// First child case
+		oldParent.SetChild(object.Sibling, z.Version(), z.Memory)
+	} else {
+		// Non-first child case
+		currObjId := uint16(oldParent.Child)
+		for {
+			if currObjId == 0 {
+				break
+			}
+
+			currObj := zobject.GetObject(currObjId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			if currObj.Sibling == object.Id {
+				currObj.SetSibling(object.Sibling, z.Version(), z.Memory)
+				break
+			}
+		}
+	}
+
+	// Set new location in the tree
+	object.SetSibling(destinationObject.Child, z.Version(), z.Memory)
+	object.SetParent(destinationObject.Id, z.Version(), z.Memory)
+	destinationObject.SetChild(object.Id, z.Version(), z.Memory)
+}
+
 func (z *ZMachine) appendText(s string) {
 	z.textOutputChannel <- s
 }
 
 func (z *ZMachine) read(opcode *Opcode) {
-	if z.version() <= 3 { // TODO - Not really sure if this is true
+	if z.Version() <= 3 { // TODO - Not really sure if this is true
+		currentLocation := zobject.GetObject(z.readVariable(16), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
 		z.statusBarChannel <- StatusBar{
-			PlaceName: z.getObjectName(z.readVariable(16)),
+			PlaceName: currentLocation.Name,
 			Score:     int(z.readVariable(17)),
 			Moves:     int(z.readVariable(18)),
 		}
@@ -414,7 +447,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	// In V5+ a custom set of terminating characters can be stored in memory
 	validTerminators := []uint8{'\n'}
-	if z.version() >= 5 {
+	if z.Version() >= 5 {
 		if z.terminatingCharTableBase() != 0 {
 			//panic("TODO - Don't use this yet so panic and fix if you find a story file with this set")
 			terminatingChrPtr := z.terminatingCharTableBase()
@@ -447,7 +480,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 	textBufferPtr++
 
 	// Skip bytes already in the buffer on v5+
-	if z.version() >= 5 {
+	if z.Version() >= 5 {
 		existingBytes := z.readByte(uint32(textBufferPtr))
 		textBufferPtr += 1 + uint16(existingBytes)
 	}
@@ -473,7 +506,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 	z.writeByte(uint32(textBufferPtr+uint16(ix)), 0)
 
 	// Need to store the number of bytes in total in v5+ as that's used to determine end point of the string
-	if z.version() >= 5 {
+	if z.Version() >= 5 {
 		z.writeByte(uint32(opcode.operands[0].Value(z)+1), uint8(ix))
 	}
 
@@ -482,7 +515,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 		z.Tokenise(uint32(opcode.operands[0].Value(z)), uint32(parseBufferPtr))
 	}
 
-	if z.version() >= 5 {
+	if z.Version() >= 5 {
 		z.writeVariable(z.readIncPC(z.callStack.peek()), 13) // TODO - Should be the typed terminating char
 	}
 }
@@ -494,7 +527,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc == 0x11bd {
+	if z.callStack.peek().pc == 0x1189 {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
@@ -511,12 +544,12 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(0)
 
 		case 2: // PRINT
-			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version(), z.alphabets)
+			text, bytesRead := zstring.Decode(z.Memory[frame.pc:], z.Version(), z.Alphabets)
 			frame.pc += bytesRead
 			z.appendText(text)
 
 		case 3: // PRINT_RET
-			text, bytesRead := zstring.Decode(z.memory[frame.pc:], z.version(), z.alphabets)
+			text, bytesRead := zstring.Decode(z.Memory[frame.pc:], z.Version(), z.Alphabets)
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
@@ -541,23 +574,23 @@ func (z *ZMachine) StepMachine() {
 			z.handleBranch(frame, opcode.operands[0].Value(z) == 0)
 
 		case 1: // GET_SIBLING
-			sibling := z.getObject(opcode.operands[0].Value(z)).sibling
+			sibling := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Sibling
 			z.writeVariable(z.readIncPC(frame), sibling)
 
 			z.handleBranch(frame, sibling != 0)
 
 		case 2: // GET_CHILD
-			child := z.getObject(opcode.operands[0].Value(z)).child
+			child := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Child
 			z.writeVariable(z.readIncPC(frame), child)
 
 			z.handleBranch(frame, child != 0)
 
 		case 3: // GET_PARENT
-			z.writeVariable(z.readIncPC(frame), z.getObject(opcode.operands[0].Value(z)).parent)
+			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Parent)
 
 		case 4: // GET_PROP_LEN
 			addr := opcode.operands[0].Value(z)
-			z.writeVariable(z.readIncPC(frame), GetPropertyLength(z.memory, uint32(addr), z.version()))
+			z.writeVariable(z.readIncPC(frame), zobject.GetPropertyLength(z.Memory, uint32(addr), z.Version()))
 
 		case 5: // INC
 			variable := uint8(opcode.operands[0].Value(z))
@@ -569,11 +602,15 @@ func (z *ZMachine) StepMachine() {
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
-			str, _ := zstring.Decode(z.memory[address:], z.version(), z.alphabets)
+			str, _ := zstring.Decode(z.Memory[address:], z.Version(), z.Alphabets)
 			z.appendText(str)
 
+		case 8: // CALL_1S
+			z.call(&opcode, function)
+
 		case 10: // PRINT_OBJ
-			z.appendText(z.getObjectName(opcode.operands[0].Value(z)))
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			z.appendText(obj.Name)
 
 		case 11: // RET
 			v := opcode.operands[0].Value(z)
@@ -586,7 +623,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
-			text, _ := zstring.Decode(z.memory[addr:], z.version(), z.alphabets)
+			text, _ := zstring.Decode(z.Memory[addr:], z.Version(), z.Alphabets)
 			z.appendText(text)
 
 		case 14: // LOAD
@@ -594,7 +631,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), z.readVariable(uint8(value)))
 
 		case 15: // NOT or CALL_1n
-			if z.version() < 5 {
+			if z.Version() < 5 {
 				val := opcode.operands[0].Value(z)
 				z.writeVariable(z.readIncPC(frame), ^val)
 			} else {
@@ -644,8 +681,8 @@ func (z *ZMachine) StepMachine() {
 			z.handleBranch(frame, branch)
 
 		case 6: // JIN
-			obj := z.getObject(opcode.operands[0].Value(z))
-			z.handleBranch(frame, obj.parent == opcode.operands[1].Value(z))
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			z.handleBranch(frame, obj.Parent == opcode.operands[1].Value(z))
 
 		case 7: // TEST
 			bitmap := opcode.operands[0].Value(z)
@@ -661,23 +698,16 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z))
 
 		case 10: // TEST_ATTR
-			obj := z.getObject(opcode.operands[0].Value(z))
-			attr := 63 - opcode.operands[1].Value(z)
-			mask := uint64(1) << attr
-			branch := obj.attributes&mask == mask
-			z.handleBranch(frame, branch)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			z.handleBranch(frame, obj.TestAttribute(opcode.operands[1].Value(z)))
 
 		case 11: // SET_ATTR
-			obj := z.getObject(opcode.operands[0].Value(z))
-			attr := 63 - opcode.operands[1].Value(z)
-			mask := uint64(1) << attr
-			obj.attributes |= mask
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj.SetAttribute(opcode.operands[1].Value(z), z.Memory, z.Version())
 
 		case 12: // CLEAR_ATTR
-			obj := z.getObject(opcode.operands[0].Value(z))
-			attr := 63 - opcode.operands[1].Value(z)
-			mask := uint64(1) << attr
-			obj.attributes &= ^mask
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj.ClearAttribute(opcode.operands[1].Value(z), z.Memory, z.Version())
 
 		case 13: // STORE
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z))
@@ -692,20 +722,22 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))))
 
 		case 17: // GET_PROP
-			prop := z.getObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)))
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
 
-			value := uint16(prop.data[0])
-			if len(prop.data) == 2 {
-				value = binary.BigEndian.Uint16(prop.data)
-			} else if len(prop.data) > 2 {
+			value := uint16(prop.Data[0])
+			if len(prop.Data) == 2 {
+				value = binary.BigEndian.Uint16(prop.Data)
+			} else if len(prop.Data) > 2 {
 				panic("Can't get property with length > 2 using get_prop")
 			}
 
 			z.writeVariable(z.readIncPC(frame), value)
 
 		case 18: // GET_PROP_ADDR
-			prop := z.getObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)))
-			z.writeVariable(z.readIncPC(frame), uint16(prop.dataAddress))
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
+			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress))
 
 		case 19:
 			// TODO - get_next_prop
@@ -737,27 +769,27 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), numerator%denominator)
 
 		case 25: // call_2s
-			if z.version() < 4 {
+			if z.Version() < 4 {
 				panic("Invalid call_2s routine on v1-3")
 			}
 
 			z.call(&opcode, function)
 
 		case 26: // CALL_2n
-			if z.version() < 5 {
+			if z.Version() < 5 {
 				panic("Invalid call_2s routine on v1-4")
 			}
 
 			z.call(&opcode, procedure)
 
 		case 27: // set_colour
-			if z.version() < 5 {
+			if z.Version() < 5 {
 				panic("Invalid set_colour routine on v1-4")
 			}
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 
 		case 28: // throw
-			if z.version() < 5 {
+			if z.Version() < 5 {
 				panic("Invalid throw routine on v1-4")
 			}
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
@@ -784,7 +816,8 @@ func (z *ZMachine) StepMachine() {
 			z.writeByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
 		case 3: // PUT_PROP
-			z.setObjectProperty(opcode.operands[0].Value(z), uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z))
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), z.Memory, z.Version(), z.ObjectTableBase())
 
 		case 4: // SREAD
 			z.read(&opcode)
@@ -815,11 +848,20 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop())
 
 		case 17: // SET_TEXT_STYLE
-			if z.version() >= 4 {
+			if z.Version() >= 4 {
 				// TODO - Handle set_text_style
 			} else {
 				panic("Can't set text style on version <=4")
 			}
+
+		case 25: // CALL_VN
+			z.call(&opcode, procedure)
+
+		case 31: // CHECK_ARG_COUNT
+			arg := opcode.operands[0].Value(z)
+			branch := arg <= uint16(frame.numValuesPassed)
+
+			z.handleBranch(frame, branch)
 
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
