@@ -527,7 +527,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc == 0x1189 {
+	if z.callStack.peek().pc == 0x1185 {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 

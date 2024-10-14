@@ -9,8 +9,11 @@ import (
 	"github.com/davetcode/goz/zstring"
 )
 
-func loadZork1() *zmachine.ZMachine {
-	romFileBytes, err := os.ReadFile("../zork1.z1")
+func loadZork1() *zmachine.ZMachine  { return loadRom("../zork1.z1") }
+func loadPraxix() *zmachine.ZMachine { return loadRom("../praxix.z5") }
+
+func loadRom(file string) *zmachine.ZMachine {
+	romFileBytes, err := os.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +35,7 @@ func TestZerothObjectRetrieval(t *testing.T) {
 func TestZork1V1ObjectRetrieval(t *testing.T) {
 	z := loadZork1()
 
-	obj := zobject.GetObject(0x23, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase())
+	obj := zobject.GetObject(0x23, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 
 	if obj.Name != "West of House" {
 		t.Errorf("Incorrect name %s", obj.Name)
@@ -51,10 +54,32 @@ func TestZork1V1ObjectRetrieval(t *testing.T) {
 	}
 }
 
+func TestPraxixV5ObjectRetrieval(t *testing.T) {
+	z := loadPraxix()
+
+	obj := zobject.GetObject(5, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Test Class
+
+	if obj.Name != "TestClass" {
+		t.Errorf("Incorrect name %s", obj.Name)
+	}
+	if obj.Parent != 1 {
+		t.Errorf("Incorrect parent %d", obj.Parent)
+	}
+	if obj.Child != 0 {
+		t.Errorf("Incorrect child %d", obj.Child)
+	}
+	if obj.Sibling != 0 {
+		t.Errorf("Incorrect sibling %d", obj.Sibling)
+	}
+	if obj.PropertyPointer != 0x032c {
+		t.Errorf("Incorrect property pointer %x", obj.PropertyPointer)
+	}
+}
+
 func TestSetPropertyV1(t *testing.T) {
 	z := loadZork1()
 
-	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
+	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
 
 	obj.SetProperty(11, 0xbeef, z.Memory, z.Version(), z.ObjectTableBase())
 	property := obj.GetProperty(11, z.Memory, z.Version(), z.ObjectTableBase())
@@ -76,7 +101,7 @@ func TestZork1V1PropertyRetrieval(t *testing.T) {
 	}
 	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
 
-	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
+	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
 
 	// Length 1 property
 	prop6 := obj.GetProperty(6, z.Memory, z.Version(), z.ObjectTableBase())
@@ -113,6 +138,50 @@ func TestZork1V1PropertyRetrieval(t *testing.T) {
 	}
 	if prop9.Data[0] != 0x00 || prop9.Data[1] != 0x05 {
 		t.Errorf("Incorrect property data %x%x", prop9.Data[0], prop9.Data[1])
+	}
+}
+
+func TestPraxixV5Property(t *testing.T) {
+	z := loadPraxix()
+
+	obj := zobject.GetObject(6, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Test Class
+	prop := obj.GetProperty(1, z.Memory, z.Version(), z.ObjectTableBase())
+	if prop.Length != 8 {
+		t.Errorf("Incorrect property length %d", prop.Length)
+	}
+	if prop.Data[0] != 0x0e || prop.Data[7] != 0xf9 {
+		t.Errorf("Incorrect property data 0x%x...%x", prop.Data[0], prop.Data[7])
+	}
+
+	propLength := zobject.GetPropertyLength(z.Memory, prop.DataAddress, z.Version())
+	if propLength != uint16(prop.Length) {
+		t.Errorf("Getting property length from address doesn't match")
+	}
+
+	prop = obj.GetProperty(2, z.Memory, z.Version(), z.ObjectTableBase())
+	if prop.Length != 2 {
+		t.Errorf("Incorrect property length %d", prop.Length)
+	}
+	if prop.Data[0] != 0x00 || prop.Data[1] != 0x05 {
+		t.Errorf("Incorrect property data 0x%x...%x", prop.Data[0], prop.Data[1])
+	}
+
+	propLength = zobject.GetPropertyLength(z.Memory, prop.DataAddress, z.Version())
+	if propLength != uint16(prop.Length) {
+		t.Errorf("Getting property length from address doesn't match")
+	}
+
+	prop = obj.GetProperty(3, z.Memory, z.Version(), z.ObjectTableBase())
+	if prop.Length != 2 {
+		t.Errorf("Incorrect property length %d", prop.Length)
+	}
+	if prop.Data[0] != 0x06 || prop.Data[1] != 0x65 {
+		t.Errorf("Incorrect property data 0x%x...%x", prop.Data[0], prop.Data[1])
+	}
+
+	propLength = zobject.GetPropertyLength(z.Memory, prop.DataAddress, z.Version())
+	if propLength != uint16(prop.Length) {
+		t.Errorf("Getting property length from address doesn't match")
 	}
 }
 
