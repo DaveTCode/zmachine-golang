@@ -26,6 +26,30 @@
         "--rom",
         "praxix.z5"
       ]
+    },
+    {
+      "name": "Launch Colossal Cave (Adventure)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "advent.z3"
+      ]
+    },
+    {
+      "name": "Hitchhikers Guide to the Galaxy",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "hhgg.z3"
+      ]
     }
   ]
 }

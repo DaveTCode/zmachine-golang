@@ -9,6 +9,14 @@ import (
 	"github.com/davetcode/goz/zstring"
 )
 
+func loadZork1() *zmachine.ZMachine {
+	romFileBytes, err := os.ReadFile("../zork1.z1")
+	if err != nil {
+		panic(err)
+	}
+	return zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+}
+
 func TestZerothObjectRetrieval(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
@@ -22,11 +30,7 @@ func TestZerothObjectRetrieval(t *testing.T) {
 }
 
 func TestZork1V1ObjectRetrieval(t *testing.T) {
-	romFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic(err)
-	}
-	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+	z := loadZork1()
 
 	obj := zobject.GetObject(0x23, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase())
 
@@ -44,6 +48,24 @@ func TestZork1V1ObjectRetrieval(t *testing.T) {
 	}
 	if obj.PropertyPointer != 0x0c79 {
 		t.Errorf("Incorrect property pointer %x", obj.PropertyPointer)
+	}
+}
+
+func TestSetPropertyV1(t *testing.T) {
+	z := loadZork1()
+
+	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
+
+	obj.SetProperty(11, 0xbeef, z.Memory, z.Version(), z.ObjectTableBase())
+	property := obj.GetProperty(11, z.Memory, z.Version(), z.ObjectTableBase())
+	if property.Data[0] != 0xbe || property.Data[1] != 0xef || property.Length != 2 {
+		t.Error("Property set didn't work on existing same length property")
+	}
+
+	obj.SetProperty(6, 0xfeed, z.Memory, z.Version(), z.ObjectTableBase())
+	property = obj.GetProperty(6, z.Memory, z.Version(), z.ObjectTableBase())
+	if property.Data[0] != 0xed || property.Length != 1 {
+		t.Error("Property set didn't work on short property")
 	}
 }
 
@@ -69,7 +91,7 @@ func TestZork1V1PropertyRetrieval(t *testing.T) {
 		t.Error("Getting property length by address not working")
 	}
 
-	// Length 1 property
+	// Length 2 property
 	prop11 := obj.GetProperty(11, z.Memory, z.Version(), z.ObjectTableBase())
 	if prop11.Length != 2 {
 		t.Errorf("Incorrect property length %d", prop11.Length)

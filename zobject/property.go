@@ -45,7 +45,7 @@ func (o *Object) SetProperty(propertyId uint8, value uint16, memory []uint8, ver
 			break
 		}
 
-		property := o.GetProperty(propertyId, memory, version, objectTableBase)
+		property := o.GetPropertyByAddress(currentPtr, memory, version)
 
 		if property.Id == propertyId {
 			switch property.Length {

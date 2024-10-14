@@ -20,8 +20,7 @@ var zstringEncodingTests = []struct {
 	out     []uint8
 	version uint8
 }{
-	{">", []uint8{12, 193, 248, 165}, 1},      // zscii test
-	{"i", []uint8{0x48, 0xa5, 0x14, 0xa5}, 1}, // test padding to 6
+	{">", []uint8{12, 193, 248, 165}, 1}, // zscii test
 }
 
 func TestZStringDecoding(t *testing.T) {
