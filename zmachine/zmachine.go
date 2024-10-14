@@ -99,7 +99,7 @@ func (z *ZMachine) staticMemoryBase() uint16 { return binary.BigEndian.Uint16(z.
 func (z *ZMachine) flagByte2() uint8         { return z.Memory[0x10] }
 func (z *ZMachine) flagByte3() uint8         { return z.Memory[0x11] }
 func (z *ZMachine) serialCode() []uint8      { return z.Memory[0x12:0x18] }
-func (z *ZMachine) abbreviationTableBase() uint16 {
+func (z *ZMachine) AbbreviationTableBase() uint16 {
 	return binary.BigEndian.Uint16(z.Memory[0x18:0x1a])
 }
 func (z *ZMachine) fileLengthDiv() uint16               { return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) }
@@ -234,7 +234,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	machine.Alphabets = zstring.LoadAlphabets(machine.Version(), rom, machine.alternativeCharSetBaseAddress())
 
 	// TODO - Is the dictionary static? If not shouldn't cache like this
-	machine.dictionary = dictionary.ParseDictionary(machine.Memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.Version(), machine.Alphabets)
+	machine.dictionary = dictionary.ParseDictionary(machine.Memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.Version(), machine.Alphabets, machine.AbbreviationTableBase())
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.Version() >= 6 {
@@ -400,10 +400,10 @@ func (z *ZMachine) retValue(val uint16) {
 	}
 }
 
-func (z *ZMachine) moveObject(objId uint16, newParent uint16) {
-	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
-	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
-	oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
+	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 
 	// Remove from old location in the sibling chain
 	if oldParent.Child == object.Id {
@@ -417,7 +417,7 @@ func (z *ZMachine) moveObject(objId uint16, newParent uint16) {
 				break
 			}
 
-			currObj := zobject.GetObject(currObjId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			currObj := zobject.GetObject(currObjId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			if currObj.Sibling == object.Id {
 				currObj.SetSibling(object.Sibling, z.Version(), z.Memory)
 				break
@@ -437,7 +437,7 @@ func (z *ZMachine) appendText(s string) {
 
 func (z *ZMachine) read(opcode *Opcode) {
 	if z.Version() <= 3 { // TODO - Not really sure if this is true
-		currentLocation := zobject.GetObject(z.readVariable(16), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+		currentLocation := zobject.GetObject(z.readVariable(16), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 		z.statusBarChannel <- StatusBar{
 			PlaceName: currentLocation.Name,
 			Score:     int(z.readVariable(17)),
@@ -544,12 +544,12 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(0)
 
 		case 2: // PRINT
-			text, bytesRead := zstring.Decode(z.Memory[frame.pc:], z.Version(), z.Alphabets)
+			text, bytesRead := zstring.Decode(z.Memory, frame.pc, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			frame.pc += bytesRead
 			z.appendText(text)
 
 		case 3: // PRINT_RET
-			text, bytesRead := zstring.Decode(z.Memory[frame.pc:], z.Version(), z.Alphabets)
+			text, bytesRead := zstring.Decode(z.Memory, frame.pc, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
@@ -574,19 +574,19 @@ func (z *ZMachine) StepMachine() {
 			z.handleBranch(frame, opcode.operands[0].Value(z) == 0)
 
 		case 1: // GET_SIBLING
-			sibling := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Sibling
+			sibling := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Sibling
 			z.writeVariable(z.readIncPC(frame), sibling)
 
 			z.handleBranch(frame, sibling != 0)
 
 		case 2: // GET_CHILD
-			child := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Child
+			child := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Child
 			z.writeVariable(z.readIncPC(frame), child)
 
 			z.handleBranch(frame, child != 0)
 
 		case 3: // GET_PARENT
-			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets).Parent)
+			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Parent)
 
 		case 4: // GET_PROP_LEN
 			addr := opcode.operands[0].Value(z)
@@ -602,14 +602,14 @@ func (z *ZMachine) StepMachine() {
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
-			str, _ := zstring.Decode(z.Memory[address:], z.Version(), z.Alphabets)
+			str, _ := zstring.Decode(z.Memory, uint32(address), z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.appendText(str)
 
 		case 8: // CALL_1S
 			z.call(&opcode, function)
 
 		case 10: // PRINT_OBJ
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.appendText(obj.Name)
 
 		case 11: // RET
@@ -623,7 +623,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
-			text, _ := zstring.Decode(z.Memory[addr:], z.Version(), z.Alphabets)
+			text, _ := zstring.Decode(z.Memory, addr, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.appendText(text)
 
 		case 14: // LOAD
@@ -681,7 +681,7 @@ func (z *ZMachine) StepMachine() {
 			z.handleBranch(frame, branch)
 
 		case 6: // JIN
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.handleBranch(frame, obj.Parent == opcode.operands[1].Value(z))
 
 		case 7: // TEST
@@ -698,22 +698,22 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z))
 
 		case 10: // TEST_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.handleBranch(frame, obj.TestAttribute(opcode.operands[1].Value(z)))
 
 		case 11: // SET_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			obj.SetAttribute(opcode.operands[1].Value(z), z.Memory, z.Version())
 
 		case 12: // CLEAR_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			obj.ClearAttribute(opcode.operands[1].Value(z), z.Memory, z.Version())
 
 		case 13: // STORE
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z))
 
 		case 14: // INSERT_OBJ
-			z.moveObject(opcode.operands[0].Value(z), opcode.operands[1].Value(z))
+			z.MoveObject(opcode.operands[0].Value(z), opcode.operands[1].Value(z))
 
 		case 15: // LOADW
 			z.writeVariable(z.readIncPC(frame), z.readHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))))
@@ -722,7 +722,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))))
 
 		case 17: // GET_PROP
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
 
 			value := uint16(prop.Data[0])
@@ -735,7 +735,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), value)
 
 		case 18: // GET_PROP_ADDR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
 			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress))
 
@@ -816,7 +816,7 @@ func (z *ZMachine) StepMachine() {
 			z.writeByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
 		case 3: // PUT_PROP
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets)
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), z.Memory, z.Version(), z.ObjectTableBase())
 
 		case 4: // SREAD

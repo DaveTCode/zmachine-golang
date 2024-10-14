@@ -17,7 +17,7 @@ type Object struct {
 	PropertyPointer uint16
 }
 
-func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uint8, alphabets *zstring.Alphabets) Object {
+func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uint8, alphabets *zstring.Alphabets, AbbreviationTableBase uint16) Object {
 	if objId == 0 {
 		panic("Can't get 0th object, it doesn't exist")
 	}
@@ -25,7 +25,7 @@ func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uin
 	if version >= 4 {
 		objectBase := uint32(objectTableBase + 63*2 + (objId-1)*14)
 		propertyPtr := binary.BigEndian.Uint16(memory[objectBase+12 : objectBase+14])
-		name, _ := zstring.Decode(memory[propertyPtr+1:], version, alphabets)
+		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), version, alphabets, AbbreviationTableBase)
 
 		return Object{
 			Id:              objId,
@@ -40,7 +40,7 @@ func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uin
 	} else {
 		objectBase := uint32(objectTableBase + 31*2 + (objId-1)*9)
 		propertyPtr := binary.BigEndian.Uint16(memory[objectBase+7 : objectBase+9])
-		name, _ := zstring.Decode(memory[propertyPtr+1:], version, alphabets)
+		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), version, alphabets, AbbreviationTableBase)
 
 		return Object{
 			Id:              objId,
@@ -65,11 +65,9 @@ func (o *Object) SetAttribute(attribute uint16, memory []uint8, version uint8) {
 	mask := uint64(1) << (63 - attribute)
 	o.Attributes |= mask
 
+	binary.BigEndian.PutUint32(memory[o.BaseAddress:o.BaseAddress+4], uint32(o.Attributes>>32))
 	if version >= 4 {
-		panic("TODO")
-		//binary.BigEndian.PutUint64(memory[o.baseAddress:o.baseAddress+6], newValue)
-	} else {
-		binary.BigEndian.PutUint32(memory[o.BaseAddress:o.BaseAddress+4], uint32(o.Attributes>>32))
+		binary.BigEndian.PutUint16(memory[o.BaseAddress+4:o.BaseAddress+6], uint16(o.Attributes>>16))
 	}
 }
 
@@ -77,11 +75,9 @@ func (o *Object) ClearAttribute(attribute uint16, memory []uint8, version uint8)
 	mask := uint64(1) << (63 - attribute)
 	o.Attributes &= ^mask
 
+	binary.BigEndian.PutUint32(memory[o.BaseAddress:o.BaseAddress+4], uint32(o.Attributes>>32))
 	if version >= 4 {
-		panic("TODO")
-		//binary.BigEndian.PutUint64(memory[o.baseAddress:o.baseAddress+6], newValue)
-	} else {
-		binary.BigEndian.PutUint32(memory[o.BaseAddress:o.BaseAddress+4], uint32(o.Attributes>>32))
+		binary.BigEndian.PutUint16(memory[o.BaseAddress+4:o.BaseAddress+6], uint16(o.Attributes>>16))
 	}
 }
 

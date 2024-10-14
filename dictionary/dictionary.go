@@ -26,7 +26,7 @@ type Dictionary struct {
 	entries []DictionaryEntry
 }
 
-func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets *zstring.Alphabets) *Dictionary {
+func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets *zstring.Alphabets, abbreviationBase uint16) *Dictionary {
 	dictionaryPtr := uint32(0)
 	numInputCodes := bytes[dictionaryPtr]
 
@@ -47,7 +47,7 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets
 
 	for ix := 0; ix < int(header.count); ix++ {
 		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)]
-		decodedWord, _ := zstring.Decode(bytes[entryPtr:], version, alphabets)
+		decodedWord, _ := zstring.Decode(bytes, entryPtr, version, alphabets, abbreviationBase)
 		entries[ix] = DictionaryEntry{
 			address:     uint16(entryPtr + baseAddress),
 			encodedWord: encodedWord,

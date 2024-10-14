@@ -18,7 +18,7 @@ func TestZerothObjectRetrieval(t *testing.T) {
 
 	memory := []uint8{}
 
-	zobject.GetObject(0, 0, memory, 1, zstring.LoadAlphabets(1, memory, 0))
+	zobject.GetObject(0, 0, memory, 1, zstring.LoadAlphabets(1, memory, 0), 0)
 }
 
 func TestZork1V1ObjectRetrieval(t *testing.T) {
@@ -28,7 +28,7 @@ func TestZork1V1ObjectRetrieval(t *testing.T) {
 	}
 	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
 
-	obj := zobject.GetObject(0x23, z.ObjectTableBase(), z.Memory, 1, z.Alphabets)
+	obj := zobject.GetObject(0x23, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase())
 
 	if obj.Name != "West of House" {
 		t.Errorf("Incorrect name %s", obj.Name)
@@ -54,7 +54,7 @@ func TestZork1V1PropertyRetrieval(t *testing.T) {
 	}
 	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
 
-	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, 1, z.Alphabets) // Damp Cave
+	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, 1, z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
 
 	// Length 1 property
 	prop6 := obj.GetProperty(6, z.Memory, z.Version(), z.ObjectTableBase())
@@ -63,6 +63,10 @@ func TestZork1V1PropertyRetrieval(t *testing.T) {
 	}
 	if prop6.Data[0] != 0x85 {
 		t.Errorf("Incorrect property data %x", prop6.Data[0])
+	}
+
+	if zobject.GetPropertyLength(z.Memory, prop6.DataAddress, z.Version()) != 1 {
+		t.Error("Getting property length by address not working")
 	}
 
 	// Length 1 property
@@ -97,7 +101,7 @@ func TestAttributesV1(t *testing.T) {
 	}
 	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
 
-	forest := zobject.GetObject(4, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets) // Forest
+	forest := zobject.GetObject(4, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Forest
 
 	if forest.TestAttribute(1) || forest.TestAttribute(4) || forest.TestAttribute(10) {
 		t.Error("Forest should not have attributes 1,4,10 set")
@@ -114,5 +118,32 @@ func TestAttributesV1(t *testing.T) {
 	forest.ClearAttribute(10, z.Memory, z.Version())
 	if forest.TestAttribute(10) {
 		t.Error("Clearing attribute 10 didn't work")
+	}
+}
+
+func TestMoveObject(t *testing.T) {
+	romFileBytes, err := os.ReadFile("../zork1.z1")
+	if err != nil {
+		panic(err)
+	}
+	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+
+	z.MoveObject(252, 4) // Move player to forest and then check
+
+	westOfHouse := zobject.GetObject(35, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	cretin := zobject.GetObject(252, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	forest := zobject.GetObject(4, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+
+	if westOfHouse.Child != 199 { // mailbox
+		t.Error("West of house should now have mailbox as first child")
+	}
+	if cretin.Parent != forest.Id {
+		t.Error("Player should now have parent set to forest")
+	}
+	if forest.Child != cretin.Id {
+		t.Error("Forest should now have child set to cretin")
+	}
+	if cretin.Sibling != 0 {
+		t.Error("Cretin should now have no sibling")
 	}
 }

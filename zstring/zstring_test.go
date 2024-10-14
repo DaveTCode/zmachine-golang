@@ -27,7 +27,7 @@ var zstringEncodingTests = []struct {
 func TestZStringDecoding(t *testing.T) {
 	for _, tt := range zstringDecodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
-			zstr, bytesRead := Decode(tt.in, tt.version, &defaultAlphabetsV1)
+			zstr, bytesRead := Decode(tt.in, 0, tt.version, &defaultAlphabetsV1, 0)
 
 			if tt.out != zstr {
 				t.Fatalf(`zstr read incorrectly expected=%s, actual=%s`, tt.out, zstr)
