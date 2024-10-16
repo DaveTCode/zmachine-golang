@@ -91,18 +91,20 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputBox.SetValue("")
 			return m, nil
 		}
+
 	case textUpdateMessage:
 		m.outputText += string(msg)
 		return m, waitForText(m.textChannel)
+
 	case stateUpdateMessage:
 		switch zmachine.StateChangeRequest(msg) {
 		case zmachine.WaitForInput:
-			// TODO - Refresh status bar here (maybe version dependent?)
 			m.appState = appWaitingForInput
 		case zmachine.Running:
 			m.appState = appRunning
 		}
 		return m, waitForStateChange(m.stateChangeChannel)
+
 	case StatusBarMessage:
 		m.statusBar = zmachine.StatusBar(msg)
 		return m, waitForStatusBar(m.statusBarChannel)
@@ -219,7 +221,7 @@ func main() {
 	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
 
 	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
-	tui := tea.NewProgram(appModel, tea.WithAltScreen())
+	tui := tea.NewProgram(appModel) //, tea.WithAltScreen())
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)
