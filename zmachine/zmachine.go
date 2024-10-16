@@ -155,13 +155,13 @@ func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 
 }
 
 func (z *ZMachine) readIncPC(frame *CallStackFrame) uint8 {
-	v := z.readByte(uint32(frame.pc))
+	v := z.readByte(frame.pc)
 	frame.pc++
 	return v
 }
 
 func (z *ZMachine) readHalfWordIncPC(frame *CallStackFrame) uint16 {
-	v := z.readHalfWord(uint32(frame.pc))
+	v := z.readHalfWord(frame.pc)
 	frame.pc += 2
 	return v
 }
@@ -413,7 +413,7 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 		oldParent.SetChild(object.Sibling, z.Version(), z.Memory)
 	} else {
 		// Non-first child case
-		currObjId := uint16(oldParent.Child)
+		currObjId := oldParent.Child
 		for {
 			if currObjId == 0 {
 				break
@@ -758,20 +758,20 @@ func (z *ZMachine) StepMachine() {
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)*opcode.operands[1].Value(z))
 
 		case 23: // DIV
-			numerator := opcode.operands[0].Value(z)
-			denominator := opcode.operands[1].Value(z)
+			numerator := int16(opcode.operands[0].Value(z))
+			denominator := int16(opcode.operands[1].Value(z))
 			if denominator == 0 {
 				panic("Invalid div by zero operation")
 			}
-			z.writeVariable(z.readIncPC(frame), numerator/denominator)
+			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator))
 
 		case 24: // MOD
-			numerator := opcode.operands[0].Value(z)
-			denominator := opcode.operands[1].Value(z)
+			numerator := int16(opcode.operands[0].Value(z))
+			denominator := int16(opcode.operands[1].Value(z))
 			if denominator == 0 {
 				panic("Invalid mod by zero operation")
 			}
-			z.writeVariable(z.readIncPC(frame), numerator%denominator)
+			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator))
 
 		case 25: // call_2s
 			if z.Version() < 4 {
@@ -808,9 +808,37 @@ func (z *ZMachine) StepMachine() {
 
 	case VAR:
 		if opcode.opcodeForm == extForm {
-			switch opcode.opcodeNumber {
+			switch opcode.opcodeByte {
+			case 0x00:
+				panic("Save not implemented")
+			case 0x01:
+				panic("Restore not implemented")
+			case 0x02: // LOG_SHIFT
+				num := opcode.operands[0].Value(z)
+				places := int16(opcode.operands[1].Value(z))
+				var result uint16
+
+				if places >= 0 {
+					result = num << uint16(places)
+				} else {
+					result = num >> (-1 * places)
+				}
+
+				z.writeVariable(z.readIncPC(frame), result)
+			case 0x03: // ART_SHIFT
+				num := int16(opcode.operands[0].Value(z))
+				places := int16(opcode.operands[1].Value(z))
+				var result uint16
+
+				if places >= 0 {
+					result = uint16(num << uint16(places))
+				} else {
+					result = uint16(num >> (-1 * places))
+				}
+
+				z.writeVariable(z.readIncPC(frame), result)
 			default:
-				panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 			}
 		} else {
 			switch opcode.opcodeNumber {
@@ -864,6 +892,10 @@ func (z *ZMachine) StepMachine() {
 				} else {
 					panic("Can't set text style on version <=4")
 				}
+
+			case 24: // NOT
+				val := opcode.operands[0].Value(z)
+				z.writeVariable(z.readIncPC(frame), ^val)
 
 			case 25: // CALL_VN
 				z.call(&opcode, procedure)
