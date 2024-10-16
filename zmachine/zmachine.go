@@ -14,9 +14,10 @@ import (
 )
 
 type StatusBar struct {
-	PlaceName string
-	Score     int
-	Moves     int
+	PlaceName   string
+	Score       int
+	Moves       int
+	IsTimeBased bool
 }
 
 type StateChangeRequest int
@@ -87,6 +88,7 @@ type ZMachine struct {
 
 func (z *ZMachine) Version() uint8           { return z.Memory[0] }
 func (z *ZMachine) flagByte1() uint8         { return z.Memory[0x01] }
+func (z *ZMachine) statusBarTimeBased() bool { return (z.flagByte1() & 0b0000_0010) != 0 }
 func (z *ZMachine) releaseNumber() uint16    { return binary.BigEndian.Uint16(z.Memory[0x02:0x04]) }
 func (z *ZMachine) pagedMemoryBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x04:0x06]) }
 func (z *ZMachine) firstInstruction() uint16 { return binary.BigEndian.Uint16(z.Memory[0x06:0x08]) }
@@ -439,9 +441,10 @@ func (z *ZMachine) read(opcode *Opcode) {
 	if z.Version() <= 3 { // TODO - Not really sure if this is true
 		currentLocation := zobject.GetObject(z.readVariable(16), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 		z.statusBarChannel <- StatusBar{
-			PlaceName: currentLocation.Name,
-			Score:     int(z.readVariable(17)),
-			Moves:     int(z.readVariable(18)),
+			PlaceName:   currentLocation.Name,
+			Score:       int(z.readVariable(17)),
+			Moves:       int(z.readVariable(18)),
+			IsTimeBased: z.statusBarTimeBased(),
 		}
 	}
 
@@ -520,6 +523,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 }
 
+// Debugging information, show last 100 program counter addresses
 var pcHistory = make([]uint32, 100)
 var pcHistoryPtr = 0
 
@@ -568,6 +572,7 @@ func (z *ZMachine) StepMachine() {
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 		}
+
 	case OP1:
 		switch opcode.opcodeNumber {
 		case 0: // JZ
@@ -802,76 +807,76 @@ func (z *ZMachine) StepMachine() {
 		}
 
 	case VAR:
-		switch opcode.opcodeNumber {
-		case 0: // CALL
-			z.call(&opcode, function)
-
-		case 1: // STOREW
-			address := opcode.operands[0].Value(z) + 2*opcode.operands[1].Value(z)
-			value := opcode.operands[2].Value(z)
-			z.writeHalfWord(uint32(address), value)
-
-		case 2: // STOREB
-			address := opcode.operands[0].Value(z) + opcode.operands[1].Value(z)
-			z.writeByte(uint32(address), uint8(opcode.operands[2].Value(z)))
-
-		case 3: // PUT_PROP
-			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-			obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), z.Memory, z.Version(), z.ObjectTableBase())
-
-		case 4: // SREAD
-			z.read(&opcode)
-
-		case 5: // PRINT_CHAR
-			z.appendText(string(uint8(opcode.operands[0].Value(z))))
-
-		case 6: // PRINT_NUM
-			z.appendText(strconv.Itoa(int(int16(opcode.operands[0].Value(z)))))
-
-		case 7: // RANDOM
-			n := int16(opcode.operands[0].Value(z))
-			result := uint16(0)
-
-			if n < 0 {
-				z.rng.Seed(int64(n))
-			} else if n == 0 {
-				z.rng.Seed(time.Now().UTC().UnixNano())
-			} else {
-				result = uint16(rand.Int31n(int32(n)))
+		if opcode.opcodeForm == extForm {
+			switch opcode.opcodeNumber {
+			default:
+				panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 			}
+		} else {
+			switch opcode.opcodeNumber {
+			case 0: // CALL
+				z.call(&opcode, function)
 
-			z.writeVariable(z.readIncPC(frame), result)
-		case 8: // PUSH
-			frame.push(opcode.operands[0].Value(z))
+			case 1: // STOREW
+				address := opcode.operands[0].Value(z) + 2*opcode.operands[1].Value(z)
+				value := opcode.operands[2].Value(z)
+				z.writeHalfWord(uint32(address), value)
 
-		case 9: // PULL
-			z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop())
+			case 2: // STOREB
+				address := opcode.operands[0].Value(z) + opcode.operands[1].Value(z)
+				z.writeByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
-		case 17: // SET_TEXT_STYLE
-			if z.Version() >= 4 {
-				// TODO - Handle set_text_style
-			} else {
-				panic("Can't set text style on version <=4")
+			case 3: // PUT_PROP
+				obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+				obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), z.Memory, z.Version(), z.ObjectTableBase())
+
+			case 4: // SREAD
+				z.read(&opcode)
+
+			case 5: // PRINT_CHAR
+				z.appendText(string(uint8(opcode.operands[0].Value(z))))
+
+			case 6: // PRINT_NUM
+				z.appendText(strconv.Itoa(int(int16(opcode.operands[0].Value(z)))))
+
+			case 7: // RANDOM
+				n := int16(opcode.operands[0].Value(z))
+				result := uint16(0)
+
+				if n < 0 {
+					z.rng.Seed(int64(n))
+				} else if n == 0 {
+					z.rng.Seed(time.Now().UTC().UnixNano())
+				} else {
+					result = uint16(rand.Int31n(int32(n)))
+				}
+
+				z.writeVariable(z.readIncPC(frame), result)
+			case 8: // PUSH
+				frame.push(opcode.operands[0].Value(z))
+
+			case 9: // PULL
+				z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop())
+
+			case 17: // SET_TEXT_STYLE
+				if z.Version() >= 4 {
+					// TODO - Handle set_text_style
+				} else {
+					panic("Can't set text style on version <=4")
+				}
+
+			case 25: // CALL_VN
+				z.call(&opcode, procedure)
+
+			case 31: // CHECK_ARG_COUNT
+				arg := opcode.operands[0].Value(z)
+				branch := arg <= uint16(frame.numValuesPassed)
+
+				z.handleBranch(frame, branch)
+
+			default:
+				panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 			}
-
-		case 25: // CALL_VN
-			z.call(&opcode, procedure)
-
-		case 31: // CHECK_ARG_COUNT
-			arg := opcode.operands[0].Value(z)
-			branch := arg <= uint16(frame.numValuesPassed)
-
-			z.handleBranch(frame, branch)
-
-		default:
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
-		}
-
-	case EXT:
-		switch opcode.opcodeNumber {
-		default:
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 		}
 	}
-
 }

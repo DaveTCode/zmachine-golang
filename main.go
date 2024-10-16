@@ -115,15 +115,48 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func createStatusLine(width int, placeName string, scoreOrHours int, movesOrMinutes int, isTimeBasedGame bool) string {
+	rightHandSide := fmt.Sprintf("Score: %d    Moves %d", scoreOrHours, movesOrMinutes)
+
+	if isTimeBasedGame {
+		rightHandSide = fmt.Sprintf("Time: %d:%d", scoreOrHours, movesOrMinutes)
+	}
+
+	// Too narrow to show properly so just show as much of the score/time/moves as we can manage
+	if len(rightHandSide) >= width {
+		return rightHandSide[:width]
+	}
+
+	if len(placeName)+len(rightHandSide)+1 >= width {
+		return fmt.Sprintf("%s %s", placeName[:width-len(rightHandSide)-1], rightHandSide)
+	}
+
+	numberSpaces := width - len(placeName) - len(rightHandSide)
+
+	return fmt.Sprintf("%s%s%s", placeName, strings.Repeat(" ", numberSpaces), rightHandSide)
+}
+
 func (m applicationModel) View() string {
+	// Wait until the screen has loaded properly to print anything
+	if m.width == 0 || m.height == 0 {
+		return "Initializing..."
+	}
+
 	s := strings.Builder{}
 
 	if m.statusBar.PlaceName != "" {
-		s.WriteString(statusMessageStyle.Render(fmt.Sprintf("%s    Score: %d    Moves: %d", m.statusBar.PlaceName, m.statusBar.Score, m.statusBar.Moves)))
+		s.WriteString(statusMessageStyle.Render(createStatusLine(m.width, m.statusBar.PlaceName, m.statusBar.Score, m.statusBar.Moves, m.statusBar.IsTimeBased)))
 		s.WriteString(appStyle.Render("\n"))
 	}
 
-	s.WriteString(wordwrap.String(appStyle.Render(m.outputText), m.width))
+	wordWrappedBody := wordwrap.String(appStyle.Render(m.outputText), m.width)
+
+	lines := strings.Split(wordWrappedBody, "\n")
+
+	if len(lines) > m.height-2 {
+		lines = lines[len(lines)-m.height+2:]
+	}
+	s.WriteString(strings.Join(lines, "\n"))
 
 	if m.appState == appWaitingForInput {
 		s.WriteString(appStyle.Render(m.inputBox.View()))
@@ -186,7 +219,7 @@ func main() {
 	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
 
 	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel)
-	tui := tea.NewProgram(appModel)
+	tui := tea.NewProgram(appModel, tea.WithAltScreen())
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)

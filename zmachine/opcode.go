@@ -78,9 +78,10 @@ func ParseOpcode(z *ZMachine) Opcode {
 
 	// First decode the opcode type (Short, Long, Variable, Extended (v5+))
 	if opcodeByte == 0xbe && z.Version() >= 5 {
+		opcode.opcodeByte = z.readIncPC(frame)
 		opcode.opcodeNumber = z.readIncPC(frame)
 		opcode.opcodeForm = extForm
-		opcode.operandCount = EXT
+		opcode.operandCount = VAR
 
 		parseVariableOperands(z, frame, &opcode)
 	} else if opcode.opcodeForm == varForm {
