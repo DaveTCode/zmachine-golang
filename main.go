@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/davetcode/goz/zmachine"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 var (
@@ -46,6 +47,8 @@ type applicationModel struct {
 	outputText         string
 	appState           appState
 	inputBox           textinput.Model
+	width              int
+	height             int
 }
 
 func (m applicationModel) Init() tea.Cmd {
@@ -70,6 +73,11 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg: // Handle window resize events
+		m.width = msg.Width
+		m.height = msg.Height
+
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			os.Exit(0)
@@ -115,7 +123,7 @@ func (m applicationModel) View() string {
 		s.WriteString(appStyle.Render("\n"))
 	}
 
-	s.WriteString(appStyle.Render(m.outputText))
+	s.WriteString(wordwrap.String(appStyle.Render(m.outputText), m.width))
 
 	if m.appState == appWaitingForInput {
 		s.WriteString(appStyle.Render(m.inputBox.View()))
