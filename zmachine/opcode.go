@@ -8,7 +8,7 @@ const (
 	largeConstant OperandType = 0b00
 	smallConstant OperandType = 0b01
 	variable      OperandType = 0b10
-	ommitted      OperandType = 0b11
+	omitted       OperandType = 0b11
 )
 
 const (
@@ -58,12 +58,12 @@ variableOperandLoop:
 		operandType := OperandType((operandTypeByte >> (2 * (3 - i))) & 0b11)
 
 		switch operandType {
-		case ommitted:
+		case omitted:
 			break variableOperandLoop
 		case smallConstant, variable:
 			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: uint16(z.readIncPC(frame))})
 		case largeConstant:
-			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: z.readHalfWordIncPC(frame)})
+			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: z.readHalfWordIncPC(frame)})
 		}
 	}
 }
@@ -79,7 +79,7 @@ func ParseOpcode(z *ZMachine) Opcode {
 	// First decode the opcode type (Short, Long, Variable, Extended (v5+))
 	if opcodeByte == 0xbe && z.Version() >= 5 {
 		opcode.opcodeByte = z.readIncPC(frame)
-		opcode.opcodeNumber = z.readIncPC(frame)
+		opcode.opcodeNumber = opcode.opcodeByte
 		opcode.opcodeForm = extForm
 		opcode.operandCount = VAR
 
@@ -103,7 +103,7 @@ func ParseOpcode(z *ZMachine) Opcode {
 		case 0b01, 0b10: // Small constant or variable
 			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: uint16(z.readIncPC(frame))})
 			opcode.operandCount = OP1
-		case 0b11: // Ommitted
+		case 0b11: // Omitted
 			opcode.operandCount = OP0
 		}
 	} else { // LONG

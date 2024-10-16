@@ -14,7 +14,7 @@ type Property struct {
 	DataAddress          uint32
 }
 
-// Property length is requested by the address of the first byte of the data
+// GetPropertyLength Property length is requested by the address of the first byte of the data
 // This function therefore works back from that to find the property length
 // based on the flags set on the property size byte(s)
 func GetPropertyLength(memory []uint8, addr uint32, version uint8) uint16 {
@@ -33,7 +33,7 @@ func GetPropertyLength(memory []uint8, addr uint32, version uint8) uint16 {
 }
 
 func (o *Object) SetProperty(propertyId uint8, value uint16, memory []uint8, version uint8, objectTableBase uint16) {
-	objectNameLength := memory[uint32(o.PropertyPointer)]
+	objectNameLength := memory[o.PropertyPointer]
 	currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 
 	for {
@@ -64,7 +64,7 @@ func (o *Object) SetProperty(propertyId uint8, value uint16, memory []uint8, ver
 }
 
 func (o *Object) GetProperty(propertyId uint8, memory []uint8, version uint8, objectTableBase uint16) Property {
-	objectNameLength := memory[uint32(o.PropertyPointer)]
+	objectNameLength := memory[o.PropertyPointer]
 	currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 
 	for {
@@ -98,7 +98,7 @@ func (o *Object) GetPropertyByAddress(propertyAddr uint32, memory []uint8, versi
 
 	if version >= 4 {
 		if propertySizeByte>>7 == 1 {
-			length = (memory[propertyAddr+1] & 0b11_1111)
+			length = memory[propertyAddr+1] & 0b11_1111
 			id = propertySizeByte & 0b11_1111
 			propertyHeaderLength = 2
 		} else {

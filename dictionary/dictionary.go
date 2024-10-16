@@ -7,14 +7,14 @@ import (
 	"github.com/davetcode/goz/zstring"
 )
 
-type DictionaryHeader struct {
+type Header struct {
 	n          uint8
 	InputCodes []uint8
 	length     uint8
 	count      int16
 }
 
-type DictionaryEntry struct {
+type Entry struct {
 	address     uint16
 	encodedWord []uint8
 	decodedWord string
@@ -22,15 +22,15 @@ type DictionaryEntry struct {
 }
 
 type Dictionary struct {
-	Header  DictionaryHeader
-	entries []DictionaryEntry
+	Header  Header
+	entries []Entry
 }
 
 func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets *zstring.Alphabets, abbreviationBase uint16) *Dictionary {
 	dictionaryPtr := uint32(0)
 	numInputCodes := bytes[dictionaryPtr]
 
-	header := DictionaryHeader{
+	header := Header{
 		n:          numInputCodes,
 		InputCodes: bytes[dictionaryPtr+1 : dictionaryPtr+uint32(numInputCodes)+1],
 		length:     bytes[(dictionaryPtr + 1 + uint32(numInputCodes))],
@@ -38,7 +38,7 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets
 	}
 
 	entryPtr := dictionaryPtr + 4 + uint32(numInputCodes)
-	var entries = make([]DictionaryEntry, header.count)
+	var entries = make([]Entry, header.count)
 
 	encodedWordLength := 4
 	if version > 3 {
@@ -48,7 +48,7 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets
 	for ix := 0; ix < int(header.count); ix++ {
 		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)]
 		decodedWord, _ := zstring.Decode(bytes, entryPtr, version, alphabets, abbreviationBase)
-		entries[ix] = DictionaryEntry{
+		entries[ix] = Entry{
 			address:     uint16(entryPtr + baseAddress),
 			encodedWord: encodedWord,
 			decodedWord: decodedWord,

@@ -368,7 +368,7 @@ func Decode(bytes []uint8, startPtr uint32, version uint8, alphabets *Alphabets,
 			// Escape code 6 on alphabet 2 means "ZSCII character" but in practice only 8 bit chars are valid so we can get away
 			// with casting down to uint8 here. Maybe not strictly accurate and would be worth revisiting - TODO
 			if currentAlphabet == 2 && zchr == 6 {
-				chrStream = append(chrStream, uint8(zchrStream[i+1]<<5|zchrStream[i+2]))
+				chrStream = append(chrStream, zchrStream[i+1]<<5|zchrStream[i+2])
 				i += 2
 			} else {
 				switch currentAlphabet {
