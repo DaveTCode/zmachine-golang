@@ -333,19 +333,22 @@ func Decode(bytes []uint8, startPtr uint32, version uint8, alphabets *Alphabets,
 			if version == 1 {
 				chrStream = append(chrStream, '\n')
 			} else {
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i+1])
+				i++
+				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
 				chrStream = append(chrStream, abbr...)
 			}
 		case 2: // Shift 1 in v1-2, abbreviations in v3+
 			if version >= 3 {
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i+1])
+				i++
+				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
 				chrStream = append(chrStream, abbr...)
 			} else {
 				nextAlphabet = (nextAlphabet + 1) % 3
 			}
 		case 3: // Shift 2 in v1-2, abbreviations in v3+
 			if version >= 3 {
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i+1])
+				i++
+				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
 				chrStream = append(chrStream, abbr...)
 			} else {
 				nextAlphabet = (nextAlphabet + 2) % 3
