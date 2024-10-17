@@ -2,22 +2,10 @@ package zstring
 
 import (
 	"bytes"
+	"encoding/binary"
 	"os"
 	"testing"
-
-	"github.com/davetcode/goz/zmachine"
-	"github.com/davetcode/goz/zstring"
 )
-
-func loadAdvent() *zmachine.ZMachine { return loadRom("../advent.z3") }
-
-func loadRom(file string) *zmachine.ZMachine {
-	romFileBytes, err := os.ReadFile(file)
-	if err != nil {
-		panic(err)
-	}
-	return zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
-}
 
 var zstringDecodingTests = []struct {
 	in        []uint8
@@ -65,9 +53,12 @@ func TestZStringEncoding(t *testing.T) {
 }
 
 func TestV3Abbreviations(t *testing.T) {
-	z := loadAdvent()
+	storyFileBytes, err := os.ReadFile("../advent.z3")
+	if err != nil {
+		panic("test story file missing")
+	}
 
-	str, _ := zstring.Decode(z.Memory, 0x44ef, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	str, _ := Decode(storyFileBytes, 0x44ef, 3, LoadAlphabets(3, storyFileBytes, 0), binary.BigEndian.Uint16(storyFileBytes[0x18:0x1a]))
 
 	if str != "Welcome to Adventure! Do you need instructions?" {
 		t.Fatalf("Invalid welcome string: %s", str)
