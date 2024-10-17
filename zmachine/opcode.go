@@ -36,7 +36,7 @@ func (operand *Operand) Value(z *ZMachine) uint16 {
 	case largeConstant, smallConstant:
 		return operand.value
 	case variable:
-		return z.readVariable(uint8(operand.value))
+		return z.readVariable(uint8(operand.value), false)
 	default:
 		return 0
 	}
@@ -52,14 +52,27 @@ type Opcode struct {
 
 func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 	operandTypeByte := z.readIncPC(frame)
+	operandTypeByteExtendedCall := uint8(0)
+	maxVariables := 4
 
-variableOperandLoop:
-	for i := uint8(0); i < 4; i++ {
-		operandType := OperandType((operandTypeByte >> (2 * (3 - i))) & 0b11)
+	if (opcode.opcodeNumber == 12 || opcode.opcodeNumber == 26) && opcode.operandCount == VAR {
+		operandTypeByteExtendedCall = z.readIncPC(frame)
+		maxVariables = 8
+	}
+
+	for varIx := 0; varIx < maxVariables; varIx++ {
+		var operandType OperandType
+		if varIx < 4 {
+			operandType = OperandType((operandTypeByte >> (2 * (3 - varIx))) & 0b11)
+		} else {
+			operandType = OperandType((operandTypeByteExtendedCall >> (2 * (7 - varIx))) & 0b11)
+		}
+
+		if operandType == omitted { // No more variables
+			break
+		}
 
 		switch operandType {
-		case omitted:
-			break variableOperandLoop
 		case smallConstant, variable:
 			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: uint16(z.readIncPC(frame))})
 		case largeConstant:
