@@ -207,6 +207,14 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 		statusBarChannel:   statusBarChannel,
 	}
 
+	machine.Memory[0x1e] = 0x6 // Interpreter number - IBM PC chosen as closest match
+	machine.Memory[0x1f] = 0x1 // Interpreter version - nobody cares
+	// TODO - Should really set screen height/width etc here but they can change so want to handle with channels and status updates from the ui properly
+
+	// Claim that this interpreter supports v1.2 of the spec (aspirational!)
+	machine.Memory[0x32] = 0x1
+	machine.Memory[0x33] = 0x2
+
 	// Load custom alphabets on v5+
 	machine.Alphabets = zstring.LoadAlphabets(machine.Version(), rom, machine.alternativeCharSetBaseAddress())
 
