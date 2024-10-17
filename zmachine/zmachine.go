@@ -36,49 +36,6 @@ const (
 	interrupt RoutineType = iota
 )
 
-type CallStackFrame struct {
-	pc              uint32   // TODO - What is the usual limit to this number?
-	routineStack    []uint16 // TODO - Really a stack, check how it's used to see if we care
-	locals          []uint16
-	routineType     RoutineType // v3+ only
-	numValuesPassed int         // v5+ only
-	framePointer    uint32
-}
-
-func (f *CallStackFrame) push(i uint16) {
-	f.routineStack = append(f.routineStack, i)
-}
-
-func (f *CallStackFrame) pop() uint16 {
-	i := f.routineStack[len(f.routineStack)-1]
-	f.routineStack = f.routineStack[:len(f.routineStack)-1]
-	return i
-}
-
-func (f *CallStackFrame) peek() uint16 {
-	return f.routineStack[len(f.routineStack)-1]
-}
-
-type CallStack struct {
-	frames []CallStackFrame
-}
-
-func (s *CallStack) push(frame CallStackFrame) {
-	s.frames = append(s.frames, frame)
-}
-
-func (s *CallStack) pop() CallStackFrame {
-	stackSize := len(s.frames)
-	frame := s.frames[stackSize-1]
-	s.frames = s.frames[:stackSize-1]
-
-	return frame
-}
-
-func (s *CallStack) peek() *CallStackFrame {
-	return &s.frames[len(s.frames)-1]
-}
-
 type ZMachine struct {
 	callStack          CallStack
 	Memory             []uint8
@@ -89,6 +46,7 @@ type ZMachine struct {
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
 	statusBarChannel   chan<- StatusBar
+	UndoStates         InMemorySaveStateCache
 }
 
 func (z *ZMachine) Version() uint8           { return z.Memory[0] }
@@ -856,6 +814,16 @@ func (z *ZMachine) StepMachine() {
 				}
 
 				z.writeVariable(z.readIncPC(frame), result, false)
+
+			case 0x09: // SAVE_UNDO
+				z.saveUndo()
+				z.writeVariable(z.readIncPC(frame), uint16(1), false) // Save always succeeds in this environment
+
+			case 0x0a: // RESTORE_UNDO
+				response := z.restoreUndo()
+				frame = z.callStack.peek()
+				z.writeVariable(z.readIncPC(frame), response, false) // Restore always says that it's done and continues from previous save
+
 			default:
 				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 			}
