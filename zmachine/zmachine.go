@@ -11,6 +11,7 @@ import (
 	"github.com/davetcode/goz/dictionary"
 	"github.com/davetcode/goz/zobject"
 	"github.com/davetcode/goz/zstring"
+	"github.com/davetcode/goz/ztable"
 )
 
 type StatusBar struct {
@@ -52,6 +53,10 @@ func (f *CallStackFrame) pop() uint16 {
 	i := f.routineStack[len(f.routineStack)-1]
 	f.routineStack = f.routineStack[:len(f.routineStack)-1]
 	return i
+}
+
+func (f *CallStackFrame) peek() uint16 {
+	return f.routineStack[len(f.routineStack)-1]
 }
 
 type CallStack struct {
@@ -184,7 +189,7 @@ func (z *ZMachine) writeHalfWord(address uint32, value uint16) {
 	binary.BigEndian.PutUint16(z.Memory[address:address+2], value)
 }
 
-func (z *ZMachine) readVariable(variable uint8) uint16 {
+func (z *ZMachine) readVariable(variable uint8, indirect bool) uint16 {
 	currentCallFrame := z.callStack.peek()
 
 	switch {
@@ -193,7 +198,14 @@ func (z *ZMachine) readVariable(variable uint8) uint16 {
 			panic("Attempt to read from empty routine stack")
 		}
 
-		return currentCallFrame.pop()
+		// "In the seven opcodes that take indirect variable references (inc, dec, inc_chk, dec_chk, load, store, pull),
+		// an indirect reference to the stack pointer does not push or pull the top item of the stack -
+		// it is read or written in place." - Verified with praxix tests
+		if indirect {
+			return currentCallFrame.peek()
+		} else {
+			return currentCallFrame.pop()
+		}
 	case variable < 16: // Routine local variables
 
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
@@ -206,11 +218,16 @@ func (z *ZMachine) readVariable(variable uint8) uint16 {
 	}
 }
 
-func (z *ZMachine) writeVariable(variable uint8, value uint16) {
+func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 	currentCallFrame := z.callStack.peek()
 
 	switch {
 	case variable == 0: // Magic stack variable
+		// Indirect writes happen in place at the top of the stack
+		if indirect {
+			_ = currentCallFrame.pop()
+		}
+
 		currentCallFrame.push(value)
 	case variable < 16: // Routine local variables
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
@@ -262,7 +279,7 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 	// Special case, if routine address is 0 then no call is made and 0 is stored in the return address
 	if routineAddress == 0 {
 		if routineType == function {
-			z.writeVariable(z.readIncPC(z.callStack.peek()), 0)
+			z.writeVariable(z.readIncPC(z.callStack.peek()), 0, false)
 		}
 
 		return
@@ -398,7 +415,7 @@ func (z *ZMachine) retValue(val uint16) {
 
 	if oldFrame.routineType == function {
 		destination := z.readIncPC(newFrame)
-		z.writeVariable(destination, val)
+		z.writeVariable(destination, val, false)
 	}
 }
 
@@ -439,11 +456,11 @@ func (z *ZMachine) appendText(s string) {
 
 func (z *ZMachine) read(opcode *Opcode) {
 	if z.Version() <= 3 { // TODO - Not really sure if this is true
-		currentLocation := zobject.GetObject(z.readVariable(16), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+		currentLocation := zobject.GetObject(z.readVariable(16, false), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 		z.statusBarChannel <- StatusBar{
 			PlaceName:   currentLocation.Name,
-			Score:       int(z.readVariable(17)),
-			Moves:       int(z.readVariable(18)),
+			Score:       int(z.readVariable(17, false)),
+			Moves:       int(z.readVariable(18, false)),
 			IsTimeBased: z.statusBarTimeBased(),
 		}
 	}
@@ -519,7 +536,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 
 	if z.Version() >= 5 {
-		z.writeVariable(z.readIncPC(z.callStack.peek()), 13) // TODO - Should be the typed terminating char
+		z.writeVariable(z.readIncPC(z.callStack.peek()), 13, false) // TODO - Should be the typed terminating char
 	}
 }
 
@@ -580,30 +597,30 @@ func (z *ZMachine) StepMachine() {
 
 		case 1: // GET_SIBLING
 			sibling := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Sibling
-			z.writeVariable(z.readIncPC(frame), sibling)
+			z.writeVariable(z.readIncPC(frame), sibling, false)
 
 			z.handleBranch(frame, sibling != 0)
 
 		case 2: // GET_CHILD
 			child := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Child
-			z.writeVariable(z.readIncPC(frame), child)
+			z.writeVariable(z.readIncPC(frame), child, false)
 
 			z.handleBranch(frame, child != 0)
 
 		case 3: // GET_PARENT
-			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Parent)
+			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()).Parent, false)
 
 		case 4: // GET_PROP_LEN
 			addr := opcode.operands[0].Value(z)
-			z.writeVariable(z.readIncPC(frame), zobject.GetPropertyLength(z.Memory, uint32(addr), z.Version()))
+			z.writeVariable(z.readIncPC(frame), zobject.GetPropertyLength(z.Memory, uint32(addr), z.Version()), false)
 
 		case 5: // INC
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable)+1)
+			z.writeVariable(variable, z.readVariable(variable, true)+1, true)
 
 		case 6: // DEC
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable)-1)
+			z.writeVariable(variable, z.readVariable(variable, true)-1, true)
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
@@ -633,12 +650,12 @@ func (z *ZMachine) StepMachine() {
 
 		case 14: // LOAD
 			value := opcode.operands[0].Value(z)
-			z.writeVariable(z.readIncPC(frame), z.readVariable(uint8(value)))
+			z.writeVariable(z.readIncPC(frame), z.readVariable(uint8(value), true), false)
 
 		case 15: // NOT or CALL_1n
 			if z.Version() < 5 {
 				val := opcode.operands[0].Value(z)
-				z.writeVariable(z.readIncPC(frame), ^val)
+				z.writeVariable(z.readIncPC(frame), ^val, false)
 			} else {
 				z.call(&opcode, procedure)
 			}
@@ -673,15 +690,17 @@ func (z *ZMachine) StepMachine() {
 
 		case 4: // DEC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable)-1)
-			branch := int16(z.readVariable(variable)) < int16(opcode.operands[1].Value(z))
+			newValue := int16(z.readVariable(variable, true)) - 1
+			z.writeVariable(variable, uint16(newValue), true)
+			branch := int16(newValue) < int16(opcode.operands[1].Value(z))
 
 			z.handleBranch(frame, branch)
 
 		case 5: // INC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable)+1)
-			branch := int16(z.readVariable(variable)) > int16(opcode.operands[1].Value(z))
+			newValue := z.readVariable(variable, true) + 1
+			z.writeVariable(variable, newValue, true)
+			branch := int16(newValue) > int16(opcode.operands[1].Value(z))
 
 			z.handleBranch(frame, branch)
 
@@ -697,10 +716,10 @@ func (z *ZMachine) StepMachine() {
 			z.handleBranch(frame, branch)
 
 		case 8: // OR
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)|opcode.operands[1].Value(z))
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)|opcode.operands[1].Value(z), false)
 
 		case 9: // AND
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z))
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z), false)
 
 		case 10: // TEST_ATTR
 			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
@@ -715,16 +734,16 @@ func (z *ZMachine) StepMachine() {
 			obj.ClearAttribute(opcode.operands[1].Value(z), z.Memory, z.Version())
 
 		case 13: // STORE
-			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z))
+			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z), true)
 
 		case 14: // INSERT_OBJ
 			z.MoveObject(opcode.operands[0].Value(z), opcode.operands[1].Value(z))
 
 		case 15: // LOADW
-			z.writeVariable(z.readIncPC(frame), z.readHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))))
+			z.writeVariable(z.readIncPC(frame), z.readHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))), false)
 
 		case 16: // LOADB
-			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))))
+			z.writeVariable(z.readIncPC(frame), uint16(z.readByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))), false)
 
 		case 17: // GET_PROP
 			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
@@ -737,25 +756,25 @@ func (z *ZMachine) StepMachine() {
 				panic("Can't get property with length > 2 using get_prop")
 			}
 
-			z.writeVariable(z.readIncPC(frame), value)
+			z.writeVariable(z.readIncPC(frame), value, false)
 
 		case 18: // GET_PROP_ADDR
 			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
-			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress))
+			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false)
 
 		case 19:
 			// TODO - get_next_prop
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 
 		case 20: // ADD
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z))
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z), false)
 
 		case 21: // SUB
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)-opcode.operands[1].Value(z))
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)-opcode.operands[1].Value(z), false)
 
 		case 22: // MUL
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)*opcode.operands[1].Value(z))
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)*opcode.operands[1].Value(z), false)
 
 		case 23: // DIV
 			numerator := int16(opcode.operands[0].Value(z))
@@ -763,7 +782,7 @@ func (z *ZMachine) StepMachine() {
 			if denominator == 0 {
 				panic("Invalid div by zero operation")
 			}
-			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator))
+			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator), false)
 
 		case 24: // MOD
 			numerator := int16(opcode.operands[0].Value(z))
@@ -771,7 +790,7 @@ func (z *ZMachine) StepMachine() {
 			if denominator == 0 {
 				panic("Invalid mod by zero operation")
 			}
-			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator))
+			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator), false)
 
 		case 25: // call_2s
 			if z.Version() < 4 {
@@ -824,7 +843,7 @@ func (z *ZMachine) StepMachine() {
 					result = num >> (-1 * places)
 				}
 
-				z.writeVariable(z.readIncPC(frame), result)
+				z.writeVariable(z.readIncPC(frame), result, false)
 			case 0x03: // ART_SHIFT
 				num := int16(opcode.operands[0].Value(z))
 				places := int16(opcode.operands[1].Value(z))
@@ -836,7 +855,7 @@ func (z *ZMachine) StepMachine() {
 					result = uint16(num >> (-1 * places))
 				}
 
-				z.writeVariable(z.readIncPC(frame), result)
+				z.writeVariable(z.readIncPC(frame), result, false)
 			default:
 				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 			}
@@ -879,12 +898,15 @@ func (z *ZMachine) StepMachine() {
 					result = uint16(rand.Int31n(int32(n)))
 				}
 
-				z.writeVariable(z.readIncPC(frame), result)
+				z.writeVariable(z.readIncPC(frame), result, false)
 			case 8: // PUSH
 				frame.push(opcode.operands[0].Value(z))
 
 			case 9: // PULL
-				z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop())
+				z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(), true)
+
+			case 12: // CALL_VS2
+				z.call(&opcode, function)
 
 			case 17: // SET_TEXT_STYLE
 				if z.Version() >= 4 {
@@ -893,12 +915,49 @@ func (z *ZMachine) StepMachine() {
 					panic("Can't set text style on version <=4")
 				}
 
+			case 23: // SCAN_TABLE
+				test := opcode.operands[0].Value(z)
+				tableAddress := opcode.operands[1].Value(z)
+				length := opcode.operands[2].Value(z)
+				form := uint16(0x82)
+
+				if len(opcode.operands) == 4 {
+					form = opcode.operands[3].Value(z)
+				}
+
+				result := ztable.ScanTable(z.Memory, test, uint32(tableAddress), length, form)
+
+				z.writeVariable(z.readIncPC(frame), uint16(result), false)
+
+				z.handleBranch(frame, result != 0)
+
 			case 24: // NOT
 				val := opcode.operands[0].Value(z)
-				z.writeVariable(z.readIncPC(frame), ^val)
+				z.writeVariable(z.readIncPC(frame), ^val, false)
 
 			case 25: // CALL_VN
 				z.call(&opcode, procedure)
+
+			case 26: // CALL_VN2
+				z.call(&opcode, procedure)
+
+			case 29: // COPY_TABLE
+				ztable.CopyTable(z.Memory, opcode.operands[0].Value(z), opcode.operands[1].Value(z), int16(opcode.operands[2].Value(z)))
+
+			case 30: // PRINT_TABLE
+				addr := opcode.operands[0].Value(z)
+				width := opcode.operands[1].Value(z)
+				height := uint16(1)
+				skip := uint16(0)
+
+				if len(opcode.operands) > 2 {
+					height = opcode.operands[2].Value(z)
+
+					if len(opcode.operands) > 3 {
+						skip = opcode.operands[3].Value(z)
+					}
+				}
+				z.appendText(ztable.PrintTable(z.Memory, uint32(addr), width, height, skip))
 
 			case 31: // CHECK_ARG_COUNT
 				arg := opcode.operands[0].Value(z)
