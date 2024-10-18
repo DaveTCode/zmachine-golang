@@ -388,24 +388,29 @@ func (z *ZMachine) retValue(val uint16) {
 func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-	oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 
-	// Remove from old location in the sibling chain
-	if oldParent.Child == object.Id {
-		// First child case
-		oldParent.SetChild(object.Sibling, z.Version(), z.Memory)
-	} else {
-		// Non-first child case
-		currObjId := oldParent.Child
-		for {
-			if currObjId == 0 {
-				break
-			}
+	if object.Parent != 0 {
+		oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 
-			currObj := zobject.GetObject(currObjId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-			if currObj.Sibling == object.Id {
-				currObj.SetSibling(object.Sibling, z.Version(), z.Memory)
-				break
+		// Remove from old location in the sibling chain
+		if oldParent.Child == object.Id {
+			// First child case
+			oldParent.SetChild(object.Sibling, z.Version(), z.Memory)
+		} else {
+			// Non-first child case - in theory can't have a sibling if no parent so no need to do this if parent == 0
+			currObjId := oldParent.Child
+			for {
+				if currObjId == 0 {
+					break
+				}
+
+				currObj := zobject.GetObject(currObjId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+				if currObj.Sibling == object.Id {
+					currObj.SetSibling(object.Sibling, z.Version(), z.Memory)
+					break
+				} else {
+					currObjId = currObj.Sibling
+				}
 			}
 		}
 	}
@@ -514,7 +519,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc == 0x1185 {
+	if z.callStack.peek().pc > uint32(len(z.Memory)) {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
@@ -606,8 +611,8 @@ func (z *ZMachine) StepMachine() {
 
 		case 12: // JUMP
 			offset := int16(opcode.operands[0].Value(z))
-			destination := uint32(int16(frame.pc) + offset - 2)
-			frame.pc = destination
+			destination := uint16(int16(frame.pc) + offset - 2)
+			frame.pc = uint32(destination)
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
