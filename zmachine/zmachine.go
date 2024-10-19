@@ -734,9 +734,10 @@ func (z *ZMachine) StepMachine() {
 			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
 			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false)
 
-		case 19:
-			// TODO - get_next_prop
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+		case 19: // GET_NEXT_PROP
+			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+			nextProp := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), z.Memory, z.Version(), z.ObjectTableBase())
+			z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
 
 		case 20: // ADD
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z), false)

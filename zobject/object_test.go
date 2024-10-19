@@ -95,11 +95,7 @@ func TestSetPropertyV1(t *testing.T) {
 }
 
 func TestZork1V1PropertyRetrieval(t *testing.T) {
-	romFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic(err)
-	}
-	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+	z := loadZork1()
 
 	obj := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Damp Cave
 
@@ -186,11 +182,7 @@ func TestPraxixV5Property(t *testing.T) {
 }
 
 func TestAttributesV1(t *testing.T) {
-	romFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic(err)
-	}
-	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+	z := loadZork1()
 
 	forest := zobject.GetObject(4, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase()) // Forest
 
@@ -213,11 +205,7 @@ func TestAttributesV1(t *testing.T) {
 }
 
 func TestMoveObject(t *testing.T) {
-	romFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic(err)
-	}
-	z := zmachine.LoadRom(romFileBytes, nil, nil, nil, nil)
+	z := loadZork1()
 
 	z.MoveObject(252, 4) // Move player to forest and then check
 
@@ -236,5 +224,31 @@ func TestMoveObject(t *testing.T) {
 	}
 	if cretin.Sibling != 0 {
 		t.Error("Cretin should now have no sibling")
+	}
+}
+
+func TestGetNextPropertyV1(t *testing.T) {
+	z := loadZork1()
+
+	dampCave := zobject.GetObject(1, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	noNameNoProps := zobject.GetObject(117, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+
+	firstProp := dampCave.GetNextProperty(0, z.Memory, z.Version(), z.ObjectTableBase())
+	if firstProp != 30 {
+		t.Fatalf("First property of damp cave should have been 30")
+	}
+
+	nextProp := dampCave.GetNextProperty(28, z.Memory, z.Version(), z.ObjectTableBase())
+	if nextProp != 11 {
+		t.Fatalf("Next property of damp cave after 28 should have been 11")
+	}
+
+	afterLastProp := dampCave.GetNextProperty(6, z.Memory, z.Version(), z.ObjectTableBase())
+	if afterLastProp != 0 {
+		t.Fatalf("Should be no property after 6 on damp cave object")
+	}
+
+	if noNameNoProps.GetNextProperty(0, z.Memory, z.Version(), z.ObjectTableBase()) != 0 {
+		t.Fatalf("Object with no property should always return 0 even for first prop")
 	}
 }

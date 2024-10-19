@@ -77,7 +77,7 @@ func (o *Object) GetProperty(propertyId uint8, memory []uint8, version uint8, ob
 
 		if property.Id == propertyId {
 			return property
-		}
+		} // TODO can probably break here if properyId > property.Id since properties must be in descending order
 
 		currentPtr += uint32(property.Length) + uint32(property.PropertyHeaderLength)
 	}
@@ -117,4 +117,24 @@ func (o *Object) GetPropertyByAddress(propertyAddr uint32, memory []uint8, versi
 		Address:              propertyAddr,
 		DataAddress:          dataAddress,
 	}
+}
+
+func (o *Object) GetNextProperty(propertyId uint8, memory []uint8, version uint8, objectTableBase uint16) uint8 {
+	if propertyId == 0 { // Special case, means get first property
+		if memory[o.PropertyPointer] == 0 {
+			return 0 // Special case, no next property means return 0
+		}
+
+		objectNameLength := memory[o.PropertyPointer]
+		currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
+		return o.GetPropertyByAddress(currentPtr, memory, version).Id
+	}
+
+	property := o.GetProperty(propertyId, memory, version, objectTableBase)
+	if property.DataAddress == 0 {
+		panic(fmt.Sprintf("Can't call get next property with invalid property id (object %d, prop %d)", o.Id, propertyId))
+	}
+
+	nextPropertyPtr := property.DataAddress + uint32(property.Length)
+	return o.GetPropertyByAddress(nextPropertyPtr, memory, version).Id
 }
