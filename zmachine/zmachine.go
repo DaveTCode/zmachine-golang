@@ -40,12 +40,14 @@ type ZMachine struct {
 	callStack          CallStack
 	Memory             []uint8
 	dictionary         *dictionary.Dictionary
+	screenModel        ScreenModel
 	rng                rand.Rand
 	Alphabets          *zstring.Alphabets
 	textOutputChannel  chan<- string
 	stateChangeChannel chan<- StateChangeRequest
 	inputChannel       <-chan string
 	statusBarChannel   chan<- StatusBar
+	screenModelChannel chan<- ScreenModel
 	UndoStates         InMemorySaveStateCache
 }
 
@@ -53,7 +55,8 @@ func (z *ZMachine) Version() uint8           { return z.Memory[0] }
 func (z *ZMachine) flagByte1() uint8         { return z.Memory[0x01] }
 func (z *ZMachine) statusBarTimeBased() bool { return (z.flagByte1() & 0b0000_0010) != 0 }
 func (z *ZMachine) releaseNumber() uint16    { return binary.BigEndian.Uint16(z.Memory[0x02:0x04]) }
-func (z *ZMachine) pagedMemoryBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x04:0x06]) }
+
+// func (z *ZMachine) pagedMemoryBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x04:0x06]) }
 func (z *ZMachine) firstInstruction() uint16 { return binary.BigEndian.Uint16(z.Memory[0x06:0x08]) }
 func (z *ZMachine) dictionaryBase() uint16   { return binary.BigEndian.Uint16(z.Memory[0x08:0x0a]) }
 func (z *ZMachine) ObjectTableBase() uint16  { return binary.BigEndian.Uint16(z.Memory[0x0a:0x0c]) }
@@ -61,26 +64,29 @@ func (z *ZMachine) globalVariableBase() uint16 {
 	return binary.BigEndian.Uint16(z.Memory[0x0c:0x0e])
 }
 func (z *ZMachine) staticMemoryBase() uint16 { return binary.BigEndian.Uint16(z.Memory[0x0e:0x10]) }
-func (z *ZMachine) flagByte2() uint8         { return z.Memory[0x10] }
-func (z *ZMachine) flagByte3() uint8         { return z.Memory[0x11] }
-func (z *ZMachine) serialCode() []uint8      { return z.Memory[0x12:0x18] }
+
+// func (z *ZMachine) flagByte2() uint8         { return z.Memory[0x10] }
+// func (z *ZMachine) flagByte3() uint8         { return z.Memory[0x11] }
+// func (z *ZMachine) serialCode() []uint8      { return z.Memory[0x12:0x18] }
 func (z *ZMachine) AbbreviationTableBase() uint16 {
 	return binary.BigEndian.Uint16(z.Memory[0x18:0x1a])
 }
-func (z *ZMachine) fileLengthDiv() uint16               { return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) }
-func (z *ZMachine) fileChecksum() uint16                { return binary.BigEndian.Uint16(z.Memory[0x1c:0x1e]) }
-func (z *ZMachine) interpreterNumber() uint8            { return z.Memory[0x1e] }
-func (z *ZMachine) interpreterVersion() uint8           { return z.Memory[0x1f] }
-func (z *ZMachine) screenHeightLines() uint8            { return z.Memory[0x20] }
-func (z *ZMachine) screenWidthChars() uint8             { return z.Memory[0x21] }
-func (z *ZMachine) screenWidthUnits() uint16            { return binary.BigEndian.Uint16(z.Memory[0x22:0x24]) }
-func (z *ZMachine) screenHeightUnits() uint16           { return binary.BigEndian.Uint16(z.Memory[0x24:0x26]) }
-func (z *ZMachine) fontHeight() uint8                   { return z.Memory[0x26] }
-func (z *ZMachine) fontWidth() uint8                    { return z.Memory[0x27] }
-func (z *ZMachine) routinesOffset() uint16              { return binary.BigEndian.Uint16(z.Memory[0x28:0x2a]) }
-func (z *ZMachine) stringOffset() uint16                { return binary.BigEndian.Uint16(z.Memory[0x2a:0x2c]) }
-func (z *ZMachine) defaultBackgroundColorNumber() uint8 { return z.Memory[0x2c] }
-func (z *ZMachine) defaultForegroundColorNumber() uint8 { return z.Memory[0x2d] }
+func (z *ZMachine) fileLengthDiv() uint16                       { return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) }
+func (z *ZMachine) fileChecksum() uint16                        { return binary.BigEndian.Uint16(z.Memory[0x1c:0x1e]) }
+func (z *ZMachine) interpreterNumber() uint8                    { return z.Memory[0x1e] }
+func (z *ZMachine) interpreterVersion() uint8                   { return z.Memory[0x1f] }
+func (z *ZMachine) screenHeightLines() uint8                    { return z.Memory[0x20] }
+func (z *ZMachine) screenWidthChars() uint8                     { return z.Memory[0x21] }
+func (z *ZMachine) screenWidthUnits() uint16                    { return binary.BigEndian.Uint16(z.Memory[0x22:0x24]) }
+func (z *ZMachine) screenHeightUnits() uint16                   { return binary.BigEndian.Uint16(z.Memory[0x24:0x26]) }
+func (z *ZMachine) fontHeight() uint8                           { return z.Memory[0x26] }
+func (z *ZMachine) fontWidth() uint8                            { return z.Memory[0x27] }
+func (z *ZMachine) routinesOffset() uint16                      { return binary.BigEndian.Uint16(z.Memory[0x28:0x2a]) }
+func (z *ZMachine) stringOffset() uint16                        { return binary.BigEndian.Uint16(z.Memory[0x2a:0x2c]) }
+func (z *ZMachine) setDefaultBackgroundColorNumber(color uint8) { z.Memory[0x2c] = color }
+func (z *ZMachine) defaultBackgroundColorNumber() uint8         { return z.Memory[0x2c] }
+func (z *ZMachine) setDefaultForegroundColorNumber(color uint8) { z.Memory[0x2c] = color }
+func (z *ZMachine) defaultForegroundColorNumber() uint8         { return z.Memory[0x2d] }
 func (z *ZMachine) terminatingCharTableBase() uint16 {
 	return binary.BigEndian.Uint16(z.Memory[0x2e:0x30])
 }
@@ -198,13 +204,14 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 	}
 }
 
-func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest, statusBarChannel chan<- StatusBar) *ZMachine {
+func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest, statusBarChannel chan<- StatusBar, screenModelChannel chan<- ScreenModel) *ZMachine {
 	machine := ZMachine{
 		Memory:             rom,
 		inputChannel:       inputChannel,
 		textOutputChannel:  textOutputChannel,
 		stateChangeChannel: stateChangeChannel,
 		statusBarChannel:   statusBarChannel,
+		screenModelChannel: screenModelChannel,
 	}
 
 	machine.Memory[0x1e] = 0x6 // Interpreter number - IBM PC chosen as closest match
@@ -215,11 +222,22 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	machine.Memory[0x32] = 0x1
 	machine.Memory[0x33] = 0x2
 
+	// Set the flags to say what is available in this interpreter
+	if machine.Version() <= 3 {
+		machine.Memory[1] |= 0b0010_0000 // Only flag to set is the "split screen available one"
+	} else {
+		machine.Memory[1] |= 0b1010_1101 // No pictures or fixed width (we only have one font)
+	}
+
 	// Load custom alphabets on v5+
 	machine.Alphabets = zstring.LoadAlphabets(machine.Version(), rom, machine.alternativeCharSetBaseAddress())
 
 	// TODO - Is the dictionary static? If not shouldn't cache like this
 	machine.dictionary = dictionary.ParseDictionary(machine.Memory[machine.dictionaryBase():], uint32(machine.dictionaryBase()), machine.Version(), machine.Alphabets, machine.AbbreviationTableBase())
+
+	machine.setDefaultBackgroundColorNumber(uint8(Black))
+	machine.setDefaultForegroundColorNumber(uint8(White))
+	machine.screenModel = newScreenModel(White, Black)
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.Version() >= 6 {
@@ -383,6 +401,17 @@ func (z *ZMachine) retValue(val uint16) {
 		destination := z.readIncPC(newFrame)
 		z.writeVariable(destination, val, false)
 	}
+}
+
+func (z *ZMachine) RemoveObject(objId uint16) {
+	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	if object.Parent != 0 {
+		parent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+		parent.SetChild(object.Sibling, z.Version(), z.Memory)
+		object.SetParent(0, z.Version(), z.Memory)
+	}
+
+	object.SetSibling(0, z.Version(), z.Memory)
 }
 
 func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
@@ -601,6 +630,9 @@ func (z *ZMachine) StepMachine() {
 		case 8: // CALL_1S
 			z.call(&opcode, function)
 
+		case 9: // REMOVE_OBJ
+			z.RemoveObject(opcode.operands[0].Value(z))
+
 		case 10: // PRINT_OBJ
 			obj := zobject.GetObject(opcode.operands[0].Value(z), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 			z.appendText(obj.Name)
@@ -631,7 +663,7 @@ func (z *ZMachine) StepMachine() {
 				z.call(&opcode, procedure)
 			}
 		default:
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+			panic(fmt.Sprintf("Invalid 1OP opcode 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
 		}
 
 	case OP2:
@@ -887,8 +919,41 @@ func (z *ZMachine) StepMachine() {
 			case 9: // PULL
 				z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(), true)
 
+			case 10: // SPLIT_WINDOW
+				if z.Version() < 3 {
+					panic("Can't call SPLIT_WINDOW on pre v3 z-machine")
+				}
+
+				lines := opcode.operands[0].Value(z)
+				z.screenModel.UpperWindowHeight = int(lines)
+
+				z.screenModelChannel <- z.screenModel
+
+			case 11: // SET_WINDOW
+				if z.Version() < 3 {
+					panic("Can't call SET_WINDOW on pre v3 z-machine")
+				}
+				window := opcode.operands[0].Value(z)
+				z.screenModel.LowerWindowActive = window == 0
+				z.screenModelChannel <- z.screenModel
+
 			case 12: // CALL_VS2
 				z.call(&opcode, function)
+
+			case 15: // SET_CURSOR
+				x := opcode.operands[0].Value(z)
+				y := opcode.operands[1].Value(z)
+
+				if z.Version() == 6 {
+					panic("Cursors are more complex on v6")
+				}
+
+				// TODO - Pretty sure you can't set the cursor on lower window v<=5
+				if !z.screenModel.LowerWindowActive {
+					z.screenModel.UpperWindowCursorX = int(x)
+					z.screenModel.UpperWindowCursorY = int(y)
+					z.screenModelChannel <- z.screenModel
+				}
 
 			case 17: // SET_TEXT_STYLE
 				if z.Version() >= 4 {
