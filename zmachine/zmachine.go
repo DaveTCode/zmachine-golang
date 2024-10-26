@@ -36,11 +36,25 @@ const (
 	interrupt RoutineType = iota
 )
 
+type MemoryStreamData struct {
+	baseAddress uint32
+	ptr         uint32
+}
+
+type Streams struct {
+	Screen           bool
+	Transcript       bool
+	Memory           bool
+	MemoryStreamData []MemoryStreamData
+	CommandScript    bool
+}
+
 type ZMachine struct {
 	callStack          CallStack
 	Memory             []uint8
 	dictionary         *dictionary.Dictionary
 	screenModel        ScreenModel
+	streams            Streams
 	rng                rand.Rand
 	Alphabets          *zstring.Alphabets
 	textOutputChannel  chan<- string
@@ -212,6 +226,12 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 		stateChangeChannel: stateChangeChannel,
 		statusBarChannel:   statusBarChannel,
 		screenModelChannel: screenModelChannel,
+		streams: Streams{
+			Screen:        true,
+			Transcript:    false,
+			Memory:        false,
+			CommandScript: false,
+		},
 	}
 
 	machine.Memory[0x1e] = 0x6 // Interpreter number - IBM PC chosen as closest match
@@ -451,15 +471,37 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 }
 
 func (z *ZMachine) appendText(s string) {
-	z.textOutputChannel <- s
+	if z.streams.Memory {
+		currentMemoryStream := &z.streams.MemoryStreamData[len(z.streams.MemoryStreamData)-1]
+		for _, r := range s {
+			z.Memory[currentMemoryStream.ptr] = uint8(r)
+			currentMemoryStream.ptr++
+		}
 
-	// If writing to the upper window we need to update the screen model and
-	// reflect the change in cursor position
-	if !z.screenModel.LowerWindowActive {
-		lines := strings.Split(s, "\n")
-		z.screenModel.UpperWindowCursorY += len(lines)
-		z.screenModel.UpperWindowCursorX += len(lines[len(lines)-1])
-		z.screenModelChannel <- z.screenModel
+		// 7.1.2.2
+		// Output stream 3 is unusual in that, while it is selected, no text is sent to any other output streams which are selected. (However, they remain selected.)
+		return
+	}
+
+	if z.streams.Screen {
+		z.textOutputChannel <- s
+
+		// If writing to the upper window we need to update the screen model and
+		// reflect the change in cursor position
+		if !z.screenModel.LowerWindowActive {
+			lines := strings.Split(s, "\n")
+			z.screenModel.UpperWindowCursorY += len(lines)
+			z.screenModel.UpperWindowCursorX += len(lines[len(lines)-1])
+			z.screenModelChannel <- z.screenModel
+		}
+	}
+
+	if z.streams.Transcript {
+		panic("TODO - Not implemented transcript")
+	}
+
+	if z.streams.CommandScript {
+		panic("TODO - Not implemented command script stream")
 	}
 }
 
@@ -913,7 +955,12 @@ func (z *ZMachine) StepMachine() {
 				z.read(&opcode)
 
 			case 5: // PRINT_CHAR
-				z.appendText(string(uint8(opcode.operands[0].Value(z))))
+				chr := uint8(opcode.operands[0].Value(z))
+				if chr != 0 { // CHR 0 is valid but doesn't do anything so don't pass it through
+					z.appendText(string(chr))
+				}
+
+				// TODO - Should I be rejecting other characters here? Non-output ansi codes perhaps
 
 			case 6: // PRINT_NUM
 				z.appendText(strconv.Itoa(int(int16(opcode.operands[0].Value(z)))))
@@ -992,13 +1039,36 @@ func (z *ZMachine) StepMachine() {
 				// TODO - Don't think i care about this, not bothering with buffering output
 
 			case 19: // OUTPUT_STREAM
-				stream := opcode.operands[0].Value(z)
-				if stream == 0 {
-					// NOOP
-				} else if stream > 0 {
-					// TODO - Enable a stream
-				} else {
-					// TODO - Disable a stream
+				stream := int16(opcode.operands[0].Value(z))
+
+				switch stream {
+				case 1, -1:
+					z.streams.Screen = stream > 0
+				case 2, -2:
+					z.streams.Transcript = stream > 0
+				case 3:
+					// TODO - Handle width of v6+ formatted memory stream data
+					z.streams.Memory = true
+					z.streams.MemoryStreamData = append(z.streams.MemoryStreamData, MemoryStreamData{
+						baseAddress: uint32(opcode.operands[1].Value(z)),
+						ptr:         uint32(opcode.operands[1].Value(z)) + 2, // Skip size word
+					})
+				case -3:
+					if z.streams.Memory {
+						// Store the amount of data written into the size word then close the current stream
+						currentActiveStream := z.streams.MemoryStreamData[len(z.streams.MemoryStreamData)-1]
+						sizeWordAddress := currentActiveStream.baseAddress
+						// Note the extra -3 here is because ptr starts 2 past base address for size word and ptr always points to next unused address
+						binary.BigEndian.PutUint16(z.Memory[sizeWordAddress:sizeWordAddress+2], uint16(currentActiveStream.ptr-currentActiveStream.baseAddress-2))
+
+						// Note that there might be historical streams still active, these act as a stack
+						z.streams.MemoryStreamData = z.streams.MemoryStreamData[:len(z.streams.MemoryStreamData)-1]
+						if len(z.streams.MemoryStreamData) == 0 {
+							z.streams.Memory = false
+						}
+					}
+				case 4, -4:
+					z.streams.CommandScript = stream > 0
 				}
 
 			case 23: // SCAN_TABLE

@@ -5,6 +5,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch baking-with-lizzie.z8",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/baking-with-lizzie.z8"
+      ]
+    },
+    {
       "name": "Launch cheater.z5",
       "type": "go",
       "request": "launch",
