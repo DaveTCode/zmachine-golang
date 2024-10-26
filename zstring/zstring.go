@@ -294,7 +294,7 @@ func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
 	return bytes
 }
 
-func Decode(bytes []uint8, startPtr uint32, version uint8, alphabets *Alphabets, AbbreviationTableBase uint16) (string, uint32) {
+func Decode(bytes []uint8, startPtr uint32, endPtr uint32, version uint8, alphabets *Alphabets, AbbreviationTableBase uint16, abbreviation bool) (string, uint32) {
 	bytesRead := uint32(0)
 	ptr := startPtr
 	baseAlphabet := a0
@@ -316,7 +316,7 @@ func Decode(bytes []uint8, startPtr uint32, version uint8, alphabets *Alphabets,
 		zchrStream = append(zchrStream, uint8((halfWord>>5)&0b11111))
 		zchrStream = append(zchrStream, uint8(halfWord&0b11111))
 
-		if isLastHalfWord || ptr >= uint32(len(bytes)-1) {
+		if isLastHalfWord || ptr >= endPtr {
 			break
 		}
 	}
@@ -334,22 +334,32 @@ func Decode(bytes []uint8, startPtr uint32, version uint8, alphabets *Alphabets,
 				chrStream = append(chrStream, '\n')
 			} else {
 				i++
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-				chrStream = append(chrStream, abbr...)
+
+				// Ignore partial constructions of abbreviations and recursive abbreviations
+				if !abbreviation && i < len(zchrStream) {
+					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, abbr...)
+				}
 			}
 		case 2: // Shift 1 in v1-2, abbreviations in v3+
 			if version >= 3 {
 				i++
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-				chrStream = append(chrStream, abbr...)
+
+				if !abbreviation && i < len(zchrStream) {
+					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, abbr...)
+				}
 			} else {
 				nextAlphabet = (nextAlphabet + 1) % 3
 			}
 		case 3: // Shift 2 in v1-2, abbreviations in v3+
 			if version >= 3 {
 				i++
-				abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-				chrStream = append(chrStream, abbr...)
+
+				if !abbreviation && i < len(zchrStream) {
+					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, abbr...)
+				}
 			} else {
 				nextAlphabet = (nextAlphabet + 2) % 3
 			}

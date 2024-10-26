@@ -5,6 +5,30 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch seastalker.z3",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/seastalker.z3"
+      ]
+    },
+    {
+      "name": "Launch zork1.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/zork1.z5"
+      ]
+    },
+    {
       "name": "Launch zork1.z1",
       "type": "go",
       "request": "launch",
@@ -12,6 +36,7 @@
       "program": "main.go",
       "console": "integratedTerminal",
       "args": [
+        "--rom",
         "zork1.z1"
       ]
     },

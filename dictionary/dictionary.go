@@ -47,7 +47,7 @@ func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets
 
 	for ix := 0; ix < int(header.count); ix++ {
 		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)]
-		decodedWord, _ := zstring.Decode(bytes, entryPtr, version, alphabets, abbreviationBase)
+		decodedWord, _ := zstring.Decode(bytes, entryPtr, entryPtr+uint32(encodedWordLength), version, alphabets, abbreviationBase, false)
 		entries[ix] = Entry{
 			address:     uint16(entryPtr + baseAddress),
 			encodedWord: encodedWord,

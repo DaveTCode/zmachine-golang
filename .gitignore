@@ -1,3 +1,4 @@
 *.exe
 goz*
 stories/
+coverage.out
