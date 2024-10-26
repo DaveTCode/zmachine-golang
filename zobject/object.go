@@ -25,7 +25,8 @@ func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uin
 	if version >= 4 {
 		objectBase := uint32(objectTableBase + 63*2 + (objId-1)*14)
 		propertyPtr := binary.BigEndian.Uint16(memory[objectBase+12 : objectBase+14])
-		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), version, alphabets, AbbreviationTableBase)
+		nameLength := memory[propertyPtr]
+		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), uint32(propertyPtr+1+uint16(nameLength)*2), version, alphabets, AbbreviationTableBase, false)
 
 		return Object{
 			Id:              objId,
@@ -40,7 +41,8 @@ func GetObject(objId uint16, objectTableBase uint16, memory []uint8, version uin
 	} else {
 		objectBase := uint32(objectTableBase + 31*2 + (objId-1)*9)
 		propertyPtr := binary.BigEndian.Uint16(memory[objectBase+7 : objectBase+9])
-		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), version, alphabets, AbbreviationTableBase)
+		nameLength := memory[propertyPtr]
+		name, _ := zstring.Decode(memory, uint32(propertyPtr+1), uint32(propertyPtr+1+uint16(nameLength)*2), version, alphabets, AbbreviationTableBase, false)
 
 		return Object{
 			Id:              objId,

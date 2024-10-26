@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -14,7 +16,8 @@ import (
 )
 
 var (
-	romFilePath string
+	romFilePath  string
+	baseAppStyle lipgloss.Style
 )
 
 type textUpdateMessage string
@@ -30,23 +33,25 @@ const (
 )
 
 type applicationModel struct {
-	textChannel        <-chan string
-	stateChangeChannel <-chan zmachine.StateChangeRequest
-	sendChannel        chan<- string
-	statusBarChannel   <-chan zmachine.StatusBar
-	screenModelChannel <-chan zmachine.ScreenModel
-	zMachine           *zmachine.ZMachine
-	statusBar          zmachine.StatusBar
-	screenModel        zmachine.ScreenModel
-	lowerWindowText    string
-	upperWindowText    []string
-	appState           appState
-	inputBox           textinput.Model
-	width              int
-	height             int
-	statusBarStyle     lipgloss.Style
-	upperWindowStyle   lipgloss.Style
-	lowerWindowStyle   lipgloss.Style
+	textChannel             <-chan string
+	stateChangeChannel      <-chan zmachine.StateChangeRequest
+	sendChannel             chan<- string
+	statusBarChannel        <-chan zmachine.StatusBar
+	screenModelChannel      <-chan zmachine.ScreenModel
+	zMachine                *zmachine.ZMachine
+	statusBar               zmachine.StatusBar
+	screenModel             zmachine.ScreenModel
+	lowerWindowText         string
+	upperWindowText         []string
+	upperWindowStyle        [][]lipgloss.Style
+	appState                appState
+	inputBox                textinput.Model
+	width                   int
+	height                  int
+	backgroundStyle         lipgloss.Style
+	statusBarStyle          lipgloss.Style
+	upperWindowStyleCurrent lipgloss.Style
+	lowerWindowStyle        lipgloss.Style
 }
 
 func (m applicationModel) Init() tea.Cmd {
@@ -62,9 +67,9 @@ func (m applicationModel) Init() tea.Cmd {
 
 func runInterpreter(z *zmachine.ZMachine) tea.Cmd {
 	return func() tea.Msg {
-		for {
-			z.StepMachine()
-		}
+		z.Run()
+
+		return nil
 	}
 }
 
@@ -76,6 +81,29 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg: // Handle window resize events
 		m.width = msg.Width
 		m.height = msg.Height
+
+		if m.height < len(m.upperWindowText) {
+			m.upperWindowText = m.upperWindowText[:m.height]
+			m.upperWindowStyle = m.upperWindowStyle[:m.height]
+		} else {
+			for range m.height - len(m.upperWindowText) {
+				m.upperWindowText = append(m.upperWindowText, strings.Repeat(" ", m.width))
+				m.upperWindowStyle = append(m.upperWindowStyle, slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width))
+			}
+		}
+
+		// Keep the upper window at exactly the size of the screen
+		for ix, row := range m.upperWindowText {
+			if m.width < len(row) {
+				m.upperWindowText[ix] = row[:m.width]
+				m.upperWindowStyle[ix] = m.upperWindowStyle[ix][:m.width]
+			} else if m.width > len(row) {
+				for ii := len(row); ii < m.width; ii++ {
+					m.upperWindowText[ix] = m.upperWindowText[ix] + " "
+					m.upperWindowStyle[ix] = append(m.upperWindowStyle[ix], baseAppStyle)
+				}
+			}
+		}
 
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -93,24 +121,30 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case textUpdateMessage:
 		if m.screenModel.LowerWindowActive {
+			// In anything other than v6 the bottom window is append only (I think - TODO)
 			m.lowerWindowText += m.lowerWindowStyle.Render(string(msg))
 		} else {
 			if m.screenModel.UpperWindowCursorY > 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
 				row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
-				text := m.upperWindowStyle.Render(string(msg))
+				text := string(msg)
+
+				// Need to track what style each rune is written in so we can track cursor position based on runes but still
+				// render using the original style they were written with. Rendering first will fill the text with ansi chars
+				// for specifying the colors/styles
+				for i := m.screenModel.UpperWindowCursorX; i < int(math.Min(float64(len(row)), float64(len(text)))); i++ {
+					m.upperWindowStyle[m.screenModel.UpperWindowCursorY][i] = m.upperWindowStyleCurrent
+				}
 
 				if m.screenModel.UpperWindowCursorX < len(row) {
 					before := row[:m.screenModel.UpperWindowCursorX]
 					after := row[m.screenModel.UpperWindowCursorX:]
-					if len(after) > len(text) {
-						after = after[len(text):]
-					} else {
-						after = ""
-					}
-					m.upperWindowText[m.screenModel.UpperWindowCursorY] = before + text + after
+					fullText := before + text + after
+					m.upperWindowText[m.screenModel.UpperWindowCursorY] = fullText[:m.width] // Truncate the text to the width of the screen
 				} else {
-					m.upperWindowText[m.screenModel.UpperWindowCursorY] += strings.Repeat(" ", m.screenModel.UpperWindowCursorX-len(row)) + text
+					// TODO Nothing happens here maybe? Trying to print on a column outside the screen
 				}
+			} else {
+				// TODO - Nothing happens here, trying to print on a row that can't be shown
 			}
 		}
 
@@ -133,12 +167,17 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.screenModel = zmachine.ScreenModel(msg)
 		if len(m.upperWindowText) != m.screenModel.UpperWindowHeight {
 			if m.zMachine.Version() == 3 {
-				m.upperWindowText = make([]string, zmachine.ScreenModel(msg).UpperWindowHeight) // Clear the upper window on v3 when split_window is called
+				for row := range m.screenModel.UpperWindowHeight {
+					m.upperWindowText[row] = strings.Repeat(" ", m.width)
+					m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
+				}
 			} else if len(m.upperWindowText) > m.screenModel.UpperWindowHeight {
 				m.upperWindowText = m.upperWindowText[:m.screenModel.UpperWindowHeight]
+				m.upperWindowStyle = m.upperWindowStyle[:m.screenModel.UpperWindowHeight]
 			} else {
 				for range m.screenModel.UpperWindowHeight - len(m.upperWindowText) {
-					m.upperWindowText = append(m.upperWindowText, "")
+					m.upperWindowText = append(m.upperWindowText, strings.Repeat(" ", m.width))
+					m.upperWindowStyle = append(m.upperWindowStyle, slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width))
 				}
 			}
 		}
@@ -146,15 +185,15 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lowerWindowStyle = m.lowerWindowStyle.
 			Background(lipgloss.Color(m.screenModel.LowerWindowBackground.ToHex())).
 			Foreground(lipgloss.Color(m.screenModel.LowerWindowForeground.ToHex())).
-			Bold(m.screenModel.LowerWindowTextStyle|zmachine.Bold == zmachine.Bold).
-			Italic(m.screenModel.LowerWindowTextStyle|zmachine.Italic == zmachine.Italic).
-			Reverse(m.screenModel.LowerWindowTextStyle|zmachine.ReverseVideo == zmachine.ReverseVideo)
-		m.upperWindowStyle = m.upperWindowStyle.
+			Bold(m.screenModel.LowerWindowTextStyle&zmachine.Bold == zmachine.Bold).
+			Italic(m.screenModel.LowerWindowTextStyle&zmachine.Italic == zmachine.Italic).
+			Reverse(m.screenModel.LowerWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
+		m.upperWindowStyleCurrent = m.upperWindowStyleCurrent.
 			Background(lipgloss.Color(m.screenModel.UpperWindowBackground.ToHex())).
 			Foreground(lipgloss.Color(m.screenModel.UpperWindowForeground.ToHex())).
-			Bold(m.screenModel.UpperWindowTextStyle|zmachine.Bold == zmachine.Bold).
-			Italic(m.screenModel.UpperWindowTextStyle|zmachine.Italic == zmachine.Italic).
-			Reverse(m.screenModel.UpperWindowTextStyle|zmachine.ReverseVideo == zmachine.ReverseVideo)
+			Bold(m.screenModel.UpperWindowTextStyle&zmachine.Bold == zmachine.Bold).
+			Italic(m.screenModel.UpperWindowTextStyle&zmachine.Italic == zmachine.Italic).
+			Reverse(m.screenModel.UpperWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
 
 		return m, waitForScreenModel(m.screenModelChannel)
 	}
@@ -203,7 +242,15 @@ func (m applicationModel) View() string {
 	} else {
 		lowerWindowHeight -= m.screenModel.UpperWindowHeight
 
-		s.WriteString(strings.Join(m.upperWindowText, "\n"))
+		var text strings.Builder
+		for row, styleRow := range m.upperWindowStyle {
+			for col, chrStyle := range styleRow {
+				chr := string([]rune(m.upperWindowText[row])[col])
+				text.WriteString(chrStyle.Render(chr))
+			}
+			text.WriteByte('\n')
+		}
+		s.WriteString(text.String())
 	}
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
@@ -222,7 +269,10 @@ func (m applicationModel) View() string {
 		s.WriteString(m.lowerWindowStyle.Render(m.inputBox.View()))
 	}
 
-	return s.String()
+	return m.backgroundStyle.
+		Width(m.width).
+		Height(m.height).
+		Render(s.String())
 }
 
 func waitForText(sub <-chan string) tea.Cmd {
@@ -268,17 +318,21 @@ func newApplicationModel(
 	ti.Width = 20
 	ti.Prompt = ""
 
+	bgStyle := lipgloss.NewStyle().Background(lipgloss.Color("#ffffff")).Foreground(lipgloss.Color("#000000"))
+
 	return applicationModel{
-		textChannel:        textOutputChannel,
-		sendChannel:        inputChannel,
-		stateChangeChannel: stateChangeChannel,
-		statusBarChannel:   statusBarChannel,
-		screenModelChannel: screenModelChannel,
-		zMachine:           zMachine,
-		appState:           appRunning,
-		inputBox:           ti,
-		upperWindowStyle:   lipgloss.NewStyle(),
-		lowerWindowStyle:   lipgloss.NewStyle(),
+		textChannel:             textOutputChannel,
+		sendChannel:             inputChannel,
+		stateChangeChannel:      stateChangeChannel,
+		statusBarChannel:        statusBarChannel,
+		screenModelChannel:      screenModelChannel,
+		zMachine:                zMachine,
+		appState:                appRunning,
+		inputBox:                ti,
+		upperWindowStyleCurrent: lipgloss.NewStyle(),
+		lowerWindowStyle:        lipgloss.NewStyle(),
+		backgroundStyle:         bgStyle,
+		statusBarStyle:          bgStyle.Reverse(true),
 	}
 }
 

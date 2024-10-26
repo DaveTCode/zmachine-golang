@@ -7,7 +7,7 @@ func FindAbbreviation(version uint8, AbbreviationTableBase uint16, memory []uint
 	addr := uint32(AbbreviationTableBase + 2*uint16(abbrIx))
 	strAddr := 2 * binary.BigEndian.Uint16(memory[addr:addr+2])
 
-	str, _ := Decode(memory, uint32(strAddr), version, alphabets, AbbreviationTableBase)
+	str, _ := Decode(memory, uint32(strAddr), uint32(len(memory)), version, alphabets, AbbreviationTableBase, true)
 
 	return str
 }

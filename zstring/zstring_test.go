@@ -29,7 +29,7 @@ var zstringEncodingTests = []struct {
 func TestZStringDecoding(t *testing.T) {
 	for _, tt := range zstringDecodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
-			zstr, bytesRead := Decode(tt.in, 0, tt.version, &defaultAlphabetsV1, 0)
+			zstr, bytesRead := Decode(tt.in, 0, uint32(len(tt.in)), tt.version, &defaultAlphabetsV1, 0, false)
 
 			if tt.out != zstr {
 				t.Fatalf(`zstr read incorrectly expected=%s, actual=%s`, tt.out, zstr)
@@ -59,7 +59,7 @@ func TestV3Abbreviations(t *testing.T) {
 		panic("test story file missing")
 	}
 
-	str, _ := Decode(storyFileBytes, 0x44ef, 3, LoadAlphabets(3, storyFileBytes, 0), binary.BigEndian.Uint16(storyFileBytes[0x18:0x1a]))
+	str, _ := Decode(storyFileBytes, 0x44ef, 0x5000, 3, LoadAlphabets(3, storyFileBytes, 0), binary.BigEndian.Uint16(storyFileBytes[0x18:0x1a]), false)
 
 	if str != "Welcome to Adventure! Do you need instructions?" {
 		t.Fatalf("Invalid welcome string: %s", str)

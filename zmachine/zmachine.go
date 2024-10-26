@@ -237,7 +237,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 
 	machine.setDefaultBackgroundColorNumber(uint8(Black))
 	machine.setDefaultForegroundColorNumber(uint8(White))
-	machine.screenModel = newScreenModel(White, Black)
+	machine.screenModel = newScreenModel(Black, White)
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.Version() >= 6 {
@@ -452,6 +452,15 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 
 func (z *ZMachine) appendText(s string) {
 	z.textOutputChannel <- s
+
+	// If writing to the upper window we need to update the screen model and
+	// reflect the change in cursor position
+	if !z.screenModel.LowerWindowActive {
+		lines := strings.Split(s, "\n")
+		z.screenModel.UpperWindowCursorY += len(lines)
+		z.screenModel.UpperWindowCursorX += len(lines[len(lines)-1])
+		z.screenModelChannel <- z.screenModel
+	}
 }
 
 func (z *ZMachine) read(opcode *Opcode) {
@@ -540,6 +549,15 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 }
 
+func (z *ZMachine) Run() {
+	// Initialise whatever is listening by sending inital versions of the screen model
+	z.screenModelChannel <- z.screenModel
+
+	for {
+		z.StepMachine()
+	}
+}
+
 // Debugging information, show last 100 program counter addresses
 var pcHistory = make([]uint32, 100)
 var pcHistoryPtr = 0
@@ -565,12 +583,12 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(0)
 
 		case 2: // PRINT
-			text, bytesRead := zstring.Decode(z.Memory, frame.pc, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+			text, bytesRead := zstring.Decode(z.Memory, frame.pc, uint32(len(z.Memory)), z.Version(), z.Alphabets, z.AbbreviationTableBase(), false)
 			frame.pc += bytesRead
 			z.appendText(text)
 
 		case 3: // PRINT_RET
-			text, bytesRead := zstring.Decode(z.Memory, frame.pc, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+			text, bytesRead := zstring.Decode(z.Memory, frame.pc, uint32(len(z.Memory)), z.Version(), z.Alphabets, z.AbbreviationTableBase(), false)
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
@@ -624,7 +642,7 @@ func (z *ZMachine) StepMachine() {
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
-			str, _ := zstring.Decode(z.Memory, uint32(address), z.Version(), z.Alphabets, z.AbbreviationTableBase())
+			str, _ := zstring.Decode(z.Memory, uint32(address), uint32(len(z.Memory)), z.Version(), z.Alphabets, z.AbbreviationTableBase(), false)
 			z.appendText(str)
 
 		case 8: // CALL_1S
@@ -643,12 +661,12 @@ func (z *ZMachine) StepMachine() {
 
 		case 12: // JUMP
 			offset := int16(opcode.operands[0].Value(z))
-			destination := uint16(int16(frame.pc) + offset - 2)
-			frame.pc = uint32(destination)
+			destination := uint32(int32(frame.pc) + int32(offset) - 2)
+			frame.pc = destination
 
 		case 13: // PRINT_PADDR
 			addr := z.packedAddress(uint32(opcode.operands[0].Value(z)), true)
-			text, _ := zstring.Decode(z.Memory, addr, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+			text, _ := zstring.Decode(z.Memory, addr, uint32(len(z.Memory)), z.Version(), z.Alphabets, z.AbbreviationTableBase(), false)
 			z.appendText(text)
 
 		case 14: // LOAD
@@ -960,6 +978,19 @@ func (z *ZMachine) StepMachine() {
 					// TODO - Handle set_text_style
 				} else {
 					panic("Can't set text style on version <=4")
+				}
+
+			case 18: // BUFFER_MODE
+				// TODO - Don't think i care about this, not bothering with buffering output
+
+			case 19: // OUTPUT_STREAM
+				stream := opcode.operands[0].Value(z)
+				if stream == 0 {
+					// NOOP
+				} else if stream > 0 {
+					// TODO - Enable a stream
+				} else {
+					// TODO - Disable a stream
 				}
 
 			case 23: // SCAN_TABLE
