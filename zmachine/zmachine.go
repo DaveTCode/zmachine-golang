@@ -240,7 +240,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 	machine.screenModel = newScreenModel(Black, White)
 
 	// V6+ uses a packed address and a routine for the initial function
-	if machine.Version() >= 6 {
+	if machine.Version() == 6 {
 		packedAddress := machine.packedAddress(uint32(machine.firstInstruction()), false)
 
 		machine.callStack.push(CallStackFrame{
@@ -566,7 +566,7 @@ func (z *ZMachine) StepMachine() {
 	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
 
-	if z.callStack.peek().pc > uint32(len(z.Memory)) {
+	if z.callStack.peek().pc == 0x855d {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
@@ -975,7 +975,15 @@ func (z *ZMachine) StepMachine() {
 
 			case 17: // SET_TEXT_STYLE
 				if z.Version() >= 4 {
-					// TODO - Handle set_text_style
+					mask := uint8(opcode.operands[0].Value(z))
+
+					if z.screenModel.LowerWindowActive {
+						z.screenModel.LowerWindowTextStyle = TextStyle(mask)
+					} else {
+						z.screenModel.UpperWindowTextStyle = TextStyle(mask)
+					}
+
+					z.screenModelChannel <- z.screenModel
 				} else {
 					panic("Can't set text style on version <=4")
 				}

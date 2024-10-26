@@ -5,6 +5,30 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch cheater.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/cheater.z5"
+      ]
+    },
+    {
+      "name": "Launch galatea.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/galatea.z5"
+      ]
+    },
+    {
       "name": "Launch seastalker.z3",
       "type": "go",
       "request": "launch",
