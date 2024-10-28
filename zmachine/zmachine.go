@@ -85,7 +85,19 @@ func (z *ZMachine) staticMemoryBase() uint16 { return binary.BigEndian.Uint16(z.
 func (z *ZMachine) AbbreviationTableBase() uint16 {
 	return binary.BigEndian.Uint16(z.Memory[0x18:0x1a])
 }
-func (z *ZMachine) fileLengthDiv() uint16                       { return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) }
+func (z *ZMachine) fileLength() uint16 {
+	var divisor uint16
+	version := z.Version()
+	switch {
+	case version <= 3:
+		divisor = 2
+	case version <= 5:
+		divisor = 4
+	default:
+		divisor = 8
+	}
+	return binary.BigEndian.Uint16(z.Memory[0x1a:0x1c]) * divisor
+}
 func (z *ZMachine) fileChecksum() uint16                        { return binary.BigEndian.Uint16(z.Memory[0x1c:0x1e]) }
 func (z *ZMachine) interpreterNumber() uint8                    { return z.Memory[0x1e] }
 func (z *ZMachine) interpreterVersion() uint8                   { return z.Memory[0x1f] }
@@ -232,6 +244,7 @@ func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- s
 			Memory:        false,
 			CommandScript: false,
 		},
+		rng: *rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	machine.Memory[0x1e] = 0x6 // Interpreter number - IBM PC chosen as closest match
@@ -426,19 +439,6 @@ func (z *ZMachine) retValue(val uint16) {
 func (z *ZMachine) RemoveObject(objId uint16) {
 	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 	if object.Parent != 0 {
-		parent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-		parent.SetChild(object.Sibling, z.Version(), z.Memory)
-		object.SetParent(0, z.Version(), z.Memory)
-	}
-
-	object.SetSibling(0, z.Version(), z.Memory)
-}
-
-func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
-	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-
-	if object.Parent != 0 {
 		oldParent := zobject.GetObject(object.Parent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 
 		// Remove from old location in the sibling chain
@@ -462,7 +462,19 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 				}
 			}
 		}
+
+		object.SetParent(0, z.Version(), z.Memory)
 	}
+
+	object.SetSibling(0, z.Version(), z.Memory)
+}
+
+func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
+	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+
+	// Detach it from it's current place in the tree
+	z.RemoveObject(object.Id)
 
 	// Set new location in the tree
 	object.SetSibling(destinationObject.Child, z.Version(), z.Memory)
@@ -645,6 +657,20 @@ func (z *ZMachine) StepMachine() {
 
 		case 11: // NEWLINE
 			z.appendText("\n")
+
+		case 13: // VERIFY
+			checksum := z.fileChecksum()
+			fileLength := z.fileLength()
+			actualChecksum := uint16(0)
+
+			for ix := 0x40; ix < int(fileLength); ix++ {
+				actualChecksum += uint16(z.Memory[ix])
+			}
+
+			z.handleBranch(frame, checksum == actualChecksum)
+
+		case 15: // PIRACY
+			z.handleBranch(frame, true) // Interpreters are asked to be gullible and to unconditionally branch
 
 		default:
 			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))

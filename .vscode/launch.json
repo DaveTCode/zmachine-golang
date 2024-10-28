@@ -77,6 +77,18 @@
       ]
     },
     {
+      "name": "Launch czech tests",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "czech.z5"
+      ]
+    },
+    {
       "name": "Launch praxix tests",
       "type": "go",
       "request": "launch",
