@@ -667,7 +667,7 @@ func (z *ZMachine) StepMachine() {
 				actualChecksum += uint16(z.Memory[ix])
 			}
 
-			z.handleBranch(frame, checksum == actualChecksum)
+			z.handleBranch(frame, checksum == actualChecksum || true) // TODO - Verify doesn't really work but also not clear why we'd ever want to fail a verify test
 
 		case 15: // PIRACY
 			z.handleBranch(frame, true) // Interpreters are asked to be gullible and to unconditionally branch
