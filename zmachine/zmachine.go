@@ -998,9 +998,9 @@ func (z *ZMachine) StepMachine() {
 				if n < 0 {
 					z.rng.Seed(int64(n))
 				} else if n == 0 {
-					z.rng.Seed(time.Now().UTC().UnixNano())
+					z.rng.Seed(time.Now().UnixNano())
 				} else {
-					result = uint16(rand.Int31n(int32(n)))
+					result = uint16(z.rng.Int31n(int32(n)))
 				}
 
 				z.writeVariable(z.readIncPC(frame), result, false)
