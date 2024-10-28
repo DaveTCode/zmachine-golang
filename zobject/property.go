@@ -99,6 +99,12 @@ func (o *Object) GetPropertyByAddress(propertyAddr uint32, memory []uint8, versi
 	if version >= 4 {
 		if propertySizeByte>>7 == 1 {
 			length = memory[propertyAddr+1] & 0b11_1111
+
+			// 12.4.2.1.1
+			// [1.0] A value of 0 as property data length (in the second byte) should be interpreted as a length of 64. (Inform can compile such properties.)
+			if length == 0 {
+				length = 64
+			}
 			id = propertySizeByte & 0b11_1111
 			propertyHeaderLength = 2
 		} else {
