@@ -375,7 +375,7 @@ func tokeniseSingleWord(bytes []uint8, wordStartPtr uint32, dictionary *dictiona
 	}
 }
 
-func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
+func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary.Dictionary, leaveWordsBlank bool) {
 	bytesRead := 0
 	words := make([]word, 0)
 	startingLocation := baddr1 + 1 // Skip byte which has max length of string in it
@@ -388,18 +388,18 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32) {
 
 	for _, chr := range z.Memory[startingLocation:] {
 		if (z.Version() < 5 && chr == 0) || (z.Version() >= 5 && currentLocation-startingLocation >= chrCount) {
-			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
+			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, dictionary, z.Version(), z.Alphabets))
 			break
 		}
 
 		if chr == ' ' { // space is always a separator
-			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
+			words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, dictionary, z.Version(), z.Alphabets))
 			startingLocation = currentLocation + 1
 		} else {
 			for _, separator := range z.dictionary.Header.InputCodes {
 				if chr == separator {
-					words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, z.dictionary, z.Version(), z.Alphabets))
-					words = append(words, tokeniseSingleWord(z.Memory[currentLocation:currentLocation+1], startingLocation, z.dictionary, z.Version(), z.Alphabets))
+					words = append(words, tokeniseSingleWord(z.Memory[startingLocation:currentLocation], startingLocation, dictionary, z.Version(), z.Alphabets))
+					words = append(words, tokeniseSingleWord(z.Memory[currentLocation:currentLocation+1], startingLocation, dictionary, z.Version(), z.Alphabets))
 					startingLocation = currentLocation + 1
 					break
 				}
@@ -472,6 +472,11 @@ func (z *ZMachine) RemoveObject(objId uint16) {
 func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 	object := zobject.GetObject(objId, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
 	destinationObject := zobject.GetObject(newParent, z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
+
+	// Don't bother moving an object if the parent already matches (the algorithm below breaks then anyway!)
+	if object.Parent == destinationObject.Id {
+		return
+	}
 
 	// Detach it from it's current place in the tree
 	z.RemoveObject(object.Id)
@@ -595,7 +600,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	// TODO - Can this ever really be zero?
 	if parseBufferPtr != 0 {
-		z.Tokenise(uint32(opcode.operands[0].Value(z)), uint32(parseBufferPtr))
+		z.Tokenise(uint32(opcode.operands[0].Value(z)), uint32(parseBufferPtr), z.dictionary, false)
 	}
 
 	if z.Version() >= 5 {
@@ -613,19 +618,23 @@ func (z *ZMachine) Run() {
 }
 
 // Debugging information, show last 100 program counter addresses
-var pcHistory = make([]uint32, 100)
+var pcHistory = make([]Opcode, 100)
 var pcHistoryPtr = 0
 
 func (z *ZMachine) StepMachine() {
-	pcHistory[pcHistoryPtr] = z.callStack.peek().pc
-	pcHistoryPtr = (pcHistoryPtr + 1) % 100
-
-	if z.callStack.peek().pc == 0x855d {
+	if z.callStack.peek().pc == 0x6c8b {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
 	opcode := ParseOpcode(z)
 	frame := z.callStack.peek()
+
+	pcHistory[pcHistoryPtr] = opcode
+	pcHistoryPtr = (pcHistoryPtr + 1) % 100
+
+	if z.Memory[0x6c27] == 0x9e {
+		pcHistoryPtr = pcHistoryPtr + 1 - 1
+	}
 
 	switch opcode.operandCount {
 	case OP0:
@@ -1122,6 +1131,27 @@ func (z *ZMachine) StepMachine() {
 
 			case 26: // CALL_VN2
 				z.call(&opcode, procedure)
+
+			case 27: // TOKENISE
+				text := opcode.operands[0].Value(z)
+				parseBuffer := opcode.operands[1].Value(z)
+				dictionaryToUse := z.dictionary
+				flag := false
+
+				if len(opcode.operands) > 2 {
+					dictionaryAddress := opcode.operands[2].Value(z)
+
+					// TODO - Handle special case custom dictionaries with negative number of entries (unsorted)
+					dictionaryToUse = dictionary.ParseDictionary(z.Memory, uint32(dictionaryAddress), z.Version(), z.Alphabets, z.AbbreviationTableBase())
+
+					if len(opcode.operands) == 4 {
+						flag = opcode.operands[3].Value(z) != 0
+
+						panic("TODO - Haven't really implemented this yet so crash if a story actually uses it")
+					}
+				}
+
+				z.Tokenise(uint32(text), uint32(parseBuffer), dictionaryToUse, flag)
 
 			case 29: // COPY_TABLE
 				ztable.CopyTable(z.Memory, opcode.operands[0].Value(z), opcode.operands[1].Value(z), int16(opcode.operands[2].Value(z)))
