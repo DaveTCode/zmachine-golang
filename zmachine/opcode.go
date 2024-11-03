@@ -43,6 +43,7 @@ func (operand *Operand) Value(z *ZMachine) uint16 {
 }
 
 type Opcode struct {
+	pc           uint32
 	opcodeByte   uint8
 	operandCount OperandCount
 	opcodeForm   OpcodeForm
@@ -83,11 +84,12 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 
 func ParseOpcode(z *ZMachine) Opcode {
 	frame := z.callStack.peek()
-	opcodeByte := z.readIncPC(frame)
 	opcode := Opcode{
-		opcodeForm: OpcodeForm(opcodeByte >> 6),
-		opcodeByte: opcodeByte,
+		pc: frame.pc,
 	}
+	opcodeByte := z.readIncPC(frame)
+	opcode.opcodeForm = OpcodeForm(opcodeByte >> 6)
+	opcode.opcodeByte = opcodeByte
 
 	// First decode the opcode type (Short, Long, Variable, Extended (v5+))
 	if opcodeByte == 0xbe && z.Version() >= 5 {
