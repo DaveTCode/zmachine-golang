@@ -33,11 +33,8 @@ const (
 )
 
 type applicationModel struct {
-	textChannel             <-chan string
-	stateChangeChannel      <-chan zmachine.StateChangeRequest
+	outputChannel           <-chan interface{}
 	sendChannel             chan<- string
-	statusBarChannel        <-chan zmachine.StatusBar
-	screenModelChannel      <-chan zmachine.ScreenModel
 	zMachine                *zmachine.ZMachine
 	statusBar               zmachine.StatusBar
 	screenModel             zmachine.ScreenModel
@@ -56,10 +53,7 @@ type applicationModel struct {
 
 func (m applicationModel) Init() tea.Cmd {
 	return tea.Batch(
-		waitForText(m.textChannel),
-		waitForStateChange(m.stateChangeChannel),
-		waitForStatusBar(m.statusBarChannel),
-		waitForScreenModel(m.screenModelChannel),
+		waitForInterpreter(m.outputChannel),
 		runInterpreter(m.zMachine),
 		tea.SetWindowTitle(romFilePath),
 	)
@@ -148,7 +142,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		return m, waitForText(m.textChannel)
+		return m, waitForInterpreter(m.outputChannel)
 
 	case stateUpdateMessage:
 		switch zmachine.StateChangeRequest(msg) {
@@ -157,11 +151,11 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case zmachine.Running:
 			m.appState = appRunning
 		}
-		return m, waitForStateChange(m.stateChangeChannel)
+		return m, waitForInterpreter(m.outputChannel)
 
 	case StatusBarMessage:
 		m.statusBar = zmachine.StatusBar(msg)
-		return m, waitForStatusBar(m.statusBarChannel)
+		return m, waitForInterpreter(m.outputChannel)
 
 	case ScreenModelMessage:
 		m.screenModel = zmachine.ScreenModel(msg)
@@ -195,7 +189,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Italic(m.screenModel.UpperWindowTextStyle&zmachine.Italic == zmachine.Italic).
 			Reverse(m.screenModel.UpperWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
 
-		return m, waitForScreenModel(m.screenModelChannel)
+		return m, waitForInterpreter(m.outputChannel)
 	}
 
 	if m.appState == appWaitingForInput {
@@ -275,27 +269,23 @@ func (m applicationModel) View() string {
 		Render(s.String())
 }
 
-func waitForText(sub <-chan string) tea.Cmd {
+func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
 	return func() tea.Msg {
-		return textUpdateMessage(<-sub)
-	}
-}
-
-func waitForStateChange(sub <-chan zmachine.StateChangeRequest) tea.Cmd {
-	return func() tea.Msg {
-		return stateUpdateMessage(<-sub)
-	}
-}
-
-func waitForStatusBar(sub <-chan zmachine.StatusBar) tea.Cmd {
-	return func() tea.Msg {
-		return StatusBarMessage(<-sub)
-	}
-}
-
-func waitForScreenModel(sub <-chan zmachine.ScreenModel) tea.Cmd {
-	return func() tea.Msg {
-		return ScreenModelMessage(<-sub)
+		msg := <-sub
+		switch msg := msg.(type) {
+		case zmachine.StateChangeRequest:
+			return stateUpdateMessage(msg)
+		case zmachine.StatusBar:
+			return StatusBarMessage(msg)
+		case zmachine.ScreenModel:
+			return ScreenModelMessage(msg)
+		case string:
+			return textUpdateMessage(msg)
+		case zmachine.Quit:
+			return tea.Quit()
+		default:
+			panic("Invalid message type sent from interpreter")
+		}
 	}
 }
 
@@ -304,13 +294,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(
-	zMachine *zmachine.ZMachine,
-	inputChannel chan<- string,
-	textOutputChannel <-chan string,
-	stateChangeChannel <-chan zmachine.StateChangeRequest,
-	statusBarChannel <-chan zmachine.StatusBar,
-	screenModelChannel <-chan zmachine.ScreenModel) applicationModel {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan interface{}) applicationModel {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -321,11 +305,8 @@ func newApplicationModel(
 	bgStyle := lipgloss.NewStyle().Background(lipgloss.Color("#ffffff")).Foreground(lipgloss.Color("#000000"))
 
 	return applicationModel{
-		textChannel:             textOutputChannel,
+		outputChannel:           outputChannel,
 		sendChannel:             inputChannel,
-		stateChangeChannel:      stateChangeChannel,
-		statusBarChannel:        statusBarChannel,
-		screenModelChannel:      screenModelChannel,
 		zMachine:                zMachine,
 		appState:                appRunning,
 		inputBox:                ti,
@@ -337,19 +318,16 @@ func newApplicationModel(
 }
 
 func main() {
-	zMachineTextChannel := make(chan string)
-	zMachineStateChangeChannel := make(chan zmachine.StateChangeRequest)
+	zMachineOutputChannel := make(chan interface{})
 	zMachineInputChannel := make(chan string)
-	zMachineStatusBarChannel := make(chan zmachine.StatusBar)
-	zMachineScreenModelChannel := make(chan zmachine.ScreenModel)
 
 	romFileBytes, err := os.ReadFile(romFilePath)
 	if err != nil {
 		panic(err)
 	}
-	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel, zMachineScreenModelChannel)
+	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
 
-	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineTextChannel, zMachineStateChangeChannel, zMachineStatusBarChannel, zMachineScreenModelChannel)
+	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
 
 	tui := tea.NewProgram(appModel) //, tea.WithAltScreen())
 

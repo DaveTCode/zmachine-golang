@@ -21,6 +21,8 @@ type StatusBar struct {
 	IsTimeBased bool
 }
 
+type Quit bool
+
 type StateChangeRequest int
 
 const (
@@ -50,19 +52,16 @@ type Streams struct {
 }
 
 type ZMachine struct {
-	callStack          CallStack
-	Memory             []uint8
-	dictionary         *dictionary.Dictionary
-	screenModel        ScreenModel
-	streams            Streams
-	rng                rand.Rand
-	Alphabets          *zstring.Alphabets
-	textOutputChannel  chan<- string
-	stateChangeChannel chan<- StateChangeRequest
-	inputChannel       <-chan string
-	statusBarChannel   chan<- StatusBar
-	screenModelChannel chan<- ScreenModel
-	UndoStates         InMemorySaveStateCache
+	callStack     CallStack
+	Memory        []uint8
+	dictionary    *dictionary.Dictionary
+	screenModel   ScreenModel
+	streams       Streams
+	rng           rand.Rand
+	Alphabets     *zstring.Alphabets
+	outputChannel chan<- interface{}
+	inputChannel  <-chan string
+	UndoStates    InMemorySaveStateCache
 }
 
 func (z *ZMachine) Version() uint8           { return z.Memory[0] }
@@ -230,14 +229,11 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 	}
 }
 
-func LoadRom(rom []uint8, inputChannel <-chan string, textOutputChannel chan<- string, stateChangeChannel chan<- StateChangeRequest, statusBarChannel chan<- StatusBar, screenModelChannel chan<- ScreenModel) *ZMachine {
+func LoadRom(rom []uint8, inputChannel <-chan string, outputChannel chan<- interface{}) *ZMachine {
 	machine := ZMachine{
-		Memory:             rom,
-		inputChannel:       inputChannel,
-		textOutputChannel:  textOutputChannel,
-		stateChangeChannel: stateChangeChannel,
-		statusBarChannel:   statusBarChannel,
-		screenModelChannel: screenModelChannel,
+		Memory:        rom,
+		inputChannel:  inputChannel,
+		outputChannel: outputChannel,
 		streams: Streams{
 			Screen:        true,
 			Transcript:    false,
@@ -501,7 +497,7 @@ func (z *ZMachine) appendText(s string) {
 	}
 
 	if z.streams.Screen {
-		z.textOutputChannel <- s
+		z.outputChannel <- s
 
 		// If writing to the upper window we need to update the screen model and
 		// reflect the change in cursor position
@@ -509,7 +505,7 @@ func (z *ZMachine) appendText(s string) {
 			lines := strings.Split(s, "\n")
 			z.screenModel.UpperWindowCursorY += len(lines)
 			z.screenModel.UpperWindowCursorX += len(lines[len(lines)-1])
-			z.screenModelChannel <- z.screenModel
+			z.outputChannel <- z.screenModel
 		}
 	}
 
@@ -525,7 +521,7 @@ func (z *ZMachine) appendText(s string) {
 func (z *ZMachine) read(opcode *Opcode) {
 	if z.Version() <= 3 { // TODO - Not really sure if this is true
 		currentLocation := zobject.GetObject(z.readVariable(16, false), z.ObjectTableBase(), z.Memory, z.Version(), z.Alphabets, z.AbbreviationTableBase())
-		z.statusBarChannel <- StatusBar{
+		z.outputChannel <- StatusBar{
 			PlaceName:   currentLocation.Name,
 			Score:       int(z.readVariable(17, false)),
 			Moves:       int(z.readVariable(18, false)),
@@ -557,7 +553,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	// TODO - Handle timed interrupts of the read function
 	// TODO - Somehow let UI know how many chars to accept
-	z.stateChangeChannel <- WaitForInput
+	z.outputChannel <- WaitForInput
 	rawText := <-z.inputChannel
 	textBufferPtr := opcode.operands[0].Value(z)
 	parseBufferPtr := opcode.operands[1].Value(z)
@@ -610,18 +606,22 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 func (z *ZMachine) Run() {
 	// Initialise whatever is listening by sending inital versions of the screen model
-	z.screenModelChannel <- z.screenModel
+	z.outputChannel <- z.screenModel
 
 	for {
-		z.StepMachine()
+		if !z.StepMachine() {
+			break
+		}
 	}
+
+	z.outputChannel <- Quit(true)
 }
 
 // Debugging information, show last 100 program counter addresses
 var pcHistory = make([]Opcode, 100)
 var pcHistoryPtr = 0
 
-func (z *ZMachine) StepMachine() {
+func (z *ZMachine) StepMachine() bool {
 	if z.callStack.peek().pc == 0x6c8b {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
@@ -662,7 +662,7 @@ func (z *ZMachine) StepMachine() {
 			z.retValue(v)
 
 		case 10: // QUIT
-			panic("TODO - Quit properly by passing information back to the calling function and tea")
+			return false
 
 		case 11: // NEWLINE
 			z.appendText("\n")
@@ -1027,7 +1027,7 @@ func (z *ZMachine) StepMachine() {
 				lines := opcode.operands[0].Value(z)
 				z.screenModel.UpperWindowHeight = int(lines)
 
-				z.screenModelChannel <- z.screenModel
+				z.outputChannel <- z.screenModel
 
 			case 11: // SET_WINDOW
 				if z.Version() < 3 {
@@ -1035,7 +1035,7 @@ func (z *ZMachine) StepMachine() {
 				}
 				window := opcode.operands[0].Value(z)
 				z.screenModel.LowerWindowActive = window == 0
-				z.screenModelChannel <- z.screenModel
+				z.outputChannel <- z.screenModel
 
 			case 12: // CALL_VS2
 				z.call(&opcode, function)
@@ -1052,7 +1052,7 @@ func (z *ZMachine) StepMachine() {
 				if !z.screenModel.LowerWindowActive {
 					z.screenModel.UpperWindowCursorX = int(x)
 					z.screenModel.UpperWindowCursorY = int(y)
-					z.screenModelChannel <- z.screenModel
+					z.outputChannel <- z.screenModel
 				}
 
 			case 17: // SET_TEXT_STYLE
@@ -1065,7 +1065,7 @@ func (z *ZMachine) StepMachine() {
 						z.screenModel.UpperWindowTextStyle = TextStyle(mask)
 					}
 
-					z.screenModelChannel <- z.screenModel
+					z.outputChannel <- z.screenModel
 				} else {
 					panic("Can't set text style on version <=4")
 				}
@@ -1182,4 +1182,6 @@ func (z *ZMachine) StepMachine() {
 			}
 		}
 	}
+
+	return true
 }
