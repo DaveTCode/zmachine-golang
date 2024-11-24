@@ -11,8 +11,8 @@ type InMemorySaveStateCache struct {
 
 func (z *ZMachine) saveUndo() {
 	// Take copy of dynamic memory
-	dynamicMemory := make([]uint8, z.staticMemoryBase())
-	copy(dynamicMemory, z.Memory)
+	dynamicMemory := make([]uint8, z.Core.StaticMemoryBase)
+	copy(dynamicMemory, z.Core.ReadSlice(0, uint32(z.Core.StaticMemoryBase)))
 
 	z.UndoStates.saveStates = append(z.UndoStates.saveStates, SaveState{
 		dynamicMemory: dynamicMemory,
@@ -30,7 +30,7 @@ func (z *ZMachine) restoreUndo() uint16 {
 
 	// Copy the old dynamic memory back in
 	// TODO - in theory need to retain bits about transcription and fixed font
-	copy(z.Memory[:z.staticMemoryBase()], state.dynamicMemory)
+	copy(z.Core.ReadSlice(0, uint32(z.Core.StaticMemoryBase)), state.dynamicMemory)
 
 	z.callStack = state.callStack.copy()
 

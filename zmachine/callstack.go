@@ -59,13 +59,8 @@ func (s *CallStack) copy() CallStack {
 			locals:          make([]uint16, len(frame.locals)),
 		}
 
-		for rx, r := range frame.routineStack {
-			copiedFrame.routineStack[rx] = r
-		}
-
-		for lx, l := range frame.locals {
-			copiedFrame.locals[lx] = l
-		}
+		copy(copiedFrame.routineStack, frame.routineStack)
+		copy(copiedFrame.locals, frame.locals)
 
 		callStack.frames[fx] = copiedFrame
 	}

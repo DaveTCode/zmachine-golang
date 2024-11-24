@@ -1,12 +1,13 @@
 package ztable
 
 import (
-	"encoding/binary"
 	"strings"
+
+	"github.com/davetcode/goz/zcore"
 )
 
-func PrintTable(memory []uint8, baddr uint32, width uint16, height uint16, skip uint16) string {
-	numBytes := memory[baddr]
+func PrintTable(core *zcore.Core, baddr uint32, width uint16, height uint16, skip uint16) string {
+	numBytes := core.ReadByte(baddr)
 	s := strings.Builder{}
 
 	for i := uint16(0); i < uint16(numBytes); i++ {
@@ -23,13 +24,13 @@ func PrintTable(memory []uint8, baddr uint32, width uint16, height uint16, skip 
 			}
 		}
 
-		s.WriteByte(memory[baddr+uint32(i)+uint32(skip*row)])
+		s.WriteByte(core.ReadByte(baddr + uint32(i) + uint32(skip*row)))
 	}
 
 	return s.String()
 }
 
-func ScanTable(memory []uint8, test uint16, baddr uint32, length uint16, form uint16) uint32 {
+func ScanTable(core *zcore.Core, test uint16, baddr uint32, length uint16, form uint16) uint32 {
 	ptr := baddr
 	fieldSize := form & 0b0111_1111
 	checkWord := form&0b1000_0000 == 0b1000_0000
@@ -39,11 +40,11 @@ func ScanTable(memory []uint8, test uint16, baddr uint32, length uint16, form ui
 
 	for i := uint16(0); i < length; i++ {
 		if !checkWord {
-			if uint16(memory[ptr]) == test { // Note the scaling up of the memory value here to u16 is because the test value can be larger and that should rightly not be found
+			if uint16(core.ReadByte(ptr)) == test { // Note the scaling up of the memory value here to u16 is because the test value can be larger and that should rightly not be found
 				return ptr
 			}
 		} else {
-			if binary.BigEndian.Uint16(memory[ptr:ptr+2]) == test {
+			if core.ReadHalfWord(ptr) == test {
 				return ptr
 			}
 		}
@@ -54,7 +55,7 @@ func ScanTable(memory []uint8, test uint16, baddr uint32, length uint16, form ui
 	return 0
 }
 
-func CopyTable(memory []uint8, first uint16, second uint16, size int16) {
+func CopyTable(core *zcore.Core, first uint16, second uint16, size int16) {
 	sizeAbs := uint16(size)
 	if size < 0 {
 		sizeAbs = uint16(-1 * size)
@@ -63,17 +64,17 @@ func CopyTable(memory []uint8, first uint16, second uint16, size int16) {
 	switch {
 	case second == 0: // special case used to zero a table
 		for i := uint16(0); i < sizeAbs; i++ {
-			memory[first+i] = 0
+			core.WriteByte(uint32(first+i), 0)
 		}
 
 	case size >= 0: // Use original values of first table don't allow mid-copy corruption
 		tmp := make([]uint8, size)
-		copy(tmp, memory[first:first+sizeAbs])
-		copy(memory[second:second+sizeAbs], tmp)
+		copy(tmp, core.ReadSlice(uint32(first), uint32(first+sizeAbs)))
+		copy(core.ReadSlice(uint32(second), uint32(second+sizeAbs)), tmp)
 
 	case size < 0: // Allow corruption of existing table as copy occurs
 		for i := uint16(0); i < sizeAbs; i++ {
-			memory[second+i] = memory[first+i]
+			core.WriteByte(uint32(second+i), core.ReadByte(uint32(first+i)))
 		}
 	}
 }
