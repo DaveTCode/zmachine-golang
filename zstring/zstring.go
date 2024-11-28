@@ -1,8 +1,9 @@
 package zstring
 
 import (
-	"encoding/binary"
 	"slices"
+
+	"github.com/davetcode/goz/zcore"
 )
 
 type Alphabets struct {
@@ -23,12 +24,12 @@ var defaultAlphabetsV2 = Alphabets{
 	a2: []rune{'\n', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ',', '!', '?', '_', '#', '\'', '"', '/', '\\', '-', ':', '(', ')'},
 }
 
-func LoadAlphabets(version uint8, memory []uint8, customAlphabetBase uint16) *Alphabets {
-	if version == 1 {
+func LoadAlphabets(core *zcore.Core) *Alphabets {
+	if core.Version == 1 {
 		return &defaultAlphabetsV1
-	} else if version < 5 {
+	} else if core.Version < 5 {
 		return &defaultAlphabetsV2
-	} else if customAlphabetBase == 0 {
+	} else if core.AlternativeCharSetBaseAddress == 0 {
 		return &defaultAlphabetsV2
 	} else {
 		panic("TODO - Load custom alphabet")
@@ -131,77 +132,6 @@ var coreUnicodeTranslationTable = map[rune]uint8{
 	'}':  0x7d,
 	'~':  0x7e,
 }
-var defaultUnicodeTranslationTable = map[rune]uint8{
-	'ä': 155,
-	'ö': 156,
-	'ü': 157,
-	'Ä': 158,
-	'Ö': 159,
-	'Ü': 160,
-	'ß': 161,
-	'»': 162,
-	'«': 163,
-	'ë': 164,
-	'ï': 165,
-	'ÿ': 166,
-	'Ë': 167,
-	'Ï': 168,
-	'á': 169,
-	'é': 170,
-	'í': 171,
-	'ó': 172,
-	'ú': 173,
-	'ý': 174,
-	'Á': 175,
-	'É': 176,
-	'Í': 177,
-	'Ó': 178,
-	'Ú': 179,
-	'Ý': 180,
-	'à': 181,
-	'è': 182,
-	'ì': 183,
-	'ò': 184,
-	'ù': 185,
-	'À': 186,
-	'È': 187,
-	'Ì': 188,
-	'Ò': 189,
-	'Ù': 190,
-	'â': 191,
-	'ê': 192,
-	'î': 193,
-	'ô': 194,
-	'û': 195,
-	'Â': 196,
-	'Ê': 197,
-	'Î': 198,
-	'Ô': 199,
-	'Û': 200,
-	'å': 201,
-	'Å': 202,
-	'ø': 203,
-	'Ø': 204,
-	'ã': 205,
-	'ñ': 206,
-	'õ': 207,
-	'Ã': 208,
-	'Ñ': 209,
-	'Õ': 210,
-	'æ': 211,
-	'Æ': 212,
-	'ç': 213,
-	'Ç': 214,
-	'þ': 215,
-	'ð': 216,
-	'Þ': 217,
-	'Ð': 218,
-	'£': 219,
-	'œ': 220,
-	'Œ': 221,
-	'¡': 222,
-	'¿': 223,
-}
 
 type Alphabet int
 
@@ -215,19 +145,19 @@ const (
 // translates them to a z-string.
 // In theory this should be the inverse of the zstring.Decode function although
 // in practice strings can be constructed for which this isn't true
-func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
+func Encode(s []rune, core *zcore.Core, alphabets *Alphabets) []uint8 {
 	zchrs := make([]uint8, 0)
 
 	// The version decides how many zchrs are allowed, we must pad and truncate to get exactly this value
 	numZChrs := 6
-	if version > 3 {
+	if core.Version > 3 {
 		numZChrs = 9
 	}
 
 	// TODO - I don't bother encoding using shift lock characters on V1-2 here, not 100% sure when they were used
 	shiftA1 := uint8(2)
 	shiftA2 := uint8(3)
-	if version > 2 {
+	if core.Version > 2 {
 		shiftA1 = 4
 		shiftA2 = 5
 	}
@@ -259,7 +189,7 @@ func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
 				// 	// TODO - Handle passing through a custom unicode translation table on V5 if one is set in the story file
 				// 	panic("We don't handle custom unicode dictionaries yet")
 				// }
-				if zchr, ok := defaultUnicodeTranslationTable[chr]; ok {
+				if zchr, ok := unicodeToZscii(chr, core); ok {
 					zchrs = append(zchrs, zchr>>5)
 					zchrs = append(zchrs, zchr&0b1_1111)
 				}
@@ -294,7 +224,7 @@ func Encode(s []rune, version uint8, alphabets *Alphabets) []uint8 {
 	return bytes
 }
 
-func Decode(bytes []uint8, startPtr uint32, endPtr uint32, version uint8, alphabets *Alphabets, AbbreviationTableBase uint16, abbreviation bool) (string, uint32) {
+func Decode(startPtr uint32, endPtr uint32, core *zcore.Core, alphabets *Alphabets, abbreviation bool) (string, uint32) {
 	bytesRead := uint32(0)
 	ptr := startPtr
 	baseAlphabet := a0
@@ -302,12 +232,12 @@ func Decode(bytes []uint8, startPtr uint32, endPtr uint32, version uint8, alphab
 	nextAlphabet := a0
 
 	var zchrStream []uint8
-	var chrStream []uint8
+	var chrStream []rune
 
 	// First convert the memory addresses into a stream of 5 bit z characters
 	// terminating at the appropriate time.
 	for {
-		halfWord := binary.BigEndian.Uint16(bytes[ptr : ptr+2])
+		halfWord := core.ReadHalfWord(ptr)
 		bytesRead += 2
 		ptr += 2
 		isLastHalfWord := (halfWord >> 15) == 1
@@ -330,48 +260,48 @@ func Decode(bytes []uint8, startPtr uint32, endPtr uint32, version uint8, alphab
 		case 0: // SPACE in all versions
 			chrStream = append(chrStream, ' ')
 		case 1: // new line in v1, abbreviations in v2+
-			if version == 1 {
+			if core.Version == 1 {
 				chrStream = append(chrStream, '\n')
 			} else {
 				i++
 
 				// Ignore partial constructions of abbreviations and recursive abbreviations
 				if !abbreviation && i < len(zchrStream) {
-					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-					chrStream = append(chrStream, abbr...)
+					abbr := FindAbbreviation(core, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, []rune(abbr)...)
 				}
 			}
 		case 2: // Shift 1 in v1-2, abbreviations in v3+
-			if version >= 3 {
+			if core.Version >= 3 {
 				i++
 
 				if !abbreviation && i < len(zchrStream) {
-					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-					chrStream = append(chrStream, abbr...)
+					abbr := FindAbbreviation(core, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, []rune(abbr)...)
 				}
 			} else {
 				nextAlphabet = (nextAlphabet + 1) % 3
 			}
 		case 3: // Shift 2 in v1-2, abbreviations in v3+
-			if version >= 3 {
+			if core.Version >= 3 {
 				i++
 
 				if !abbreviation && i < len(zchrStream) {
-					abbr := FindAbbreviation(version, AbbreviationTableBase, bytes, alphabets, zchr, zchrStream[i])
-					chrStream = append(chrStream, abbr...)
+					abbr := FindAbbreviation(core, alphabets, zchr, zchrStream[i])
+					chrStream = append(chrStream, []rune(abbr)...)
 				}
 			} else {
 				nextAlphabet = (nextAlphabet + 2) % 3
 			}
 		case 4: // Shift-lock 1 in v1-2, shift 1 in v3+
-			if version >= 3 {
+			if core.Version >= 3 {
 				nextAlphabet = (nextAlphabet + 1) % 3
 			} else {
 				baseAlphabet = (baseAlphabet + 1) % 3
 				nextAlphabet = baseAlphabet
 			}
 		case 5: // Shift-lock 2 in v1-2, shift 1 in v3+
-			if version >= 3 {
+			if core.Version >= 3 {
 				nextAlphabet = (nextAlphabet + 2) % 3
 			} else {
 				baseAlphabet = (baseAlphabet + 2) % 3
@@ -379,20 +309,25 @@ func Decode(bytes []uint8, startPtr uint32, endPtr uint32, version uint8, alphab
 			}
 		default:
 			// Escape code 6 on alphabet 2 means "ZSCII character" but in practice only 8 bit chars are valid so we can get away
-			// with casting down to uint8 here. Maybe not strictly accurate and would be worth revisiting - TODO
+			// with casting down to uint8 here
 			if currentAlphabet == 2 && zchr == 6 {
 				if len(zchrStream) > i+2 { // Ignore partial constructions
-					chrStream = append(chrStream, zchrStream[i+1]<<5|zchrStream[i+2])
+					r, ok := ZsciiToUnicode(uint8((zchrStream[i+1]<<5)|(zchrStream[i+2]&0b1_1111)), core)
+					if ok {
+						chrStream = append(chrStream, r)
+					} else {
+						chrStream = append(chrStream, 0) // TODO - Is anything better than 0 for printing unknown unicode?
+					}
 				}
 				i += 2
 			} else {
 				switch currentAlphabet {
 				case a0:
-					chrStream = append(chrStream, uint8(alphabets.a0[zchr-6]))
+					chrStream = append(chrStream, alphabets.a0[zchr-6])
 				case a1:
-					chrStream = append(chrStream, uint8(alphabets.a1[zchr-6]))
+					chrStream = append(chrStream, alphabets.a1[zchr-6])
 				case a2:
-					chrStream = append(chrStream, uint8(alphabets.a2[zchr-7]))
+					chrStream = append(chrStream, alphabets.a2[zchr-7])
 				}
 			}
 		}

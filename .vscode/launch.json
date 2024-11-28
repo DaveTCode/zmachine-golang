@@ -123,6 +123,18 @@
         "--rom",
         "hhgg.z3"
       ]
+    },
+    {
+      "name": "Unicode test",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "unicode.z5"
+      ]
     }
   ]
 }

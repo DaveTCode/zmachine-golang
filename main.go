@@ -160,7 +160,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ScreenModelMessage:
 		m.screenModel = zmachine.ScreenModel(msg)
 		if len(m.upperWindowText) != m.screenModel.UpperWindowHeight {
-			if m.zMachine.Version() == 3 {
+			if m.zMachine.Core.Version == 3 {
 				for row := range m.screenModel.UpperWindowHeight {
 					m.upperWindowText[row] = strings.Repeat(" ", m.width)
 					m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)

@@ -56,7 +56,7 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 	operandTypeByteExtendedCall := uint8(0)
 	maxVariables := 4
 
-	if (opcode.opcodeNumber == 12 || opcode.opcodeNumber == 26) && opcode.operandCount == VAR {
+	if (opcode.opcodeNumber == 12 || opcode.opcodeNumber == 26) && opcode.operandCount == VAR && opcode.opcodeForm != extForm {
 		operandTypeByteExtendedCall = z.readIncPC(frame)
 		maxVariables = 8
 	}
@@ -77,7 +77,7 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 		case smallConstant, variable:
 			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: uint16(z.readIncPC(frame))})
 		case largeConstant:
-			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: z.readHalfWordIncPC(frame)})
+			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: z.ReadHalfWordIncPC(frame)})
 		}
 	}
 }
@@ -92,7 +92,7 @@ func ParseOpcode(z *ZMachine) Opcode {
 	opcode.opcodeByte = opcodeByte
 
 	// First decode the opcode type (Short, Long, Variable, Extended (v5+))
-	if opcodeByte == 0xbe && z.Version() >= 5 {
+	if opcodeByte == 0xbe && z.Core.Version >= 5 {
 		opcode.opcodeByte = z.readIncPC(frame)
 		opcode.opcodeNumber = opcode.opcodeByte
 		opcode.opcodeForm = extForm
@@ -113,7 +113,7 @@ func ParseOpcode(z *ZMachine) Opcode {
 
 		switch operandType {
 		case 0b00: // Large Constant (2 bytes)
-			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: z.readHalfWordIncPC(frame)})
+			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: z.ReadHalfWordIncPC(frame)})
 			opcode.operandCount = OP1
 		case 0b01, 0b10: // Small constant or variable
 			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: uint16(z.readIncPC(frame))})

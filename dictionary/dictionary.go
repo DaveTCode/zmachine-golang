@@ -2,8 +2,8 @@ package dictionary
 
 import (
 	"bytes"
-	"encoding/binary"
 
+	"github.com/davetcode/goz/zcore"
 	"github.com/davetcode/goz/zstring"
 )
 
@@ -26,33 +26,33 @@ type Dictionary struct {
 	entries []Entry
 }
 
-func ParseDictionary(bytes []uint8, baseAddress uint32, version uint8, alphabets *zstring.Alphabets, abbreviationBase uint16) *Dictionary {
-	dictionaryPtr := uint32(0)
-	numInputCodes := bytes[dictionaryPtr]
+func ParseDictionary(baseAddress uint32, core *zcore.Core, alphabets *zstring.Alphabets) *Dictionary {
+	dictionaryPtr := baseAddress
+	numInputCodes := core.ReadByte(dictionaryPtr)
 
 	header := Header{
 		n:          numInputCodes,
-		InputCodes: bytes[dictionaryPtr+1 : dictionaryPtr+uint32(numInputCodes)+1],
-		length:     bytes[(dictionaryPtr + 1 + uint32(numInputCodes))],
-		count:      int16(binary.BigEndian.Uint16(bytes[dictionaryPtr+2+uint32(numInputCodes) : dictionaryPtr+4+uint32(numInputCodes)])),
+		InputCodes: core.ReadSlice(dictionaryPtr+1, dictionaryPtr+uint32(numInputCodes)+1),
+		length:     core.ReadByte((dictionaryPtr + 1 + uint32(numInputCodes))),
+		count:      int16(core.ReadHalfWord(dictionaryPtr + 2 + uint32(numInputCodes))),
 	}
 
 	entryPtr := dictionaryPtr + 4 + uint32(numInputCodes)
 	var entries = make([]Entry, header.count)
 
 	encodedWordLength := 4
-	if version > 3 {
+	if core.Version > 3 {
 		encodedWordLength = 6
 	}
 
 	for ix := 0; ix < int(header.count); ix++ {
-		encodedWord := bytes[entryPtr : entryPtr+uint32(encodedWordLength)]
-		decodedWord, _ := zstring.Decode(bytes, entryPtr, entryPtr+uint32(encodedWordLength), version, alphabets, abbreviationBase, false)
+		encodedWord := core.ReadSlice(entryPtr, entryPtr+uint32(encodedWordLength))
+		decodedWord, _ := zstring.Decode(entryPtr, entryPtr+uint32(encodedWordLength), core, alphabets, false)
 		entries[ix] = Entry{
-			address:     uint16(entryPtr + baseAddress),
+			address:     uint16(entryPtr),
 			encodedWord: encodedWord,
 			decodedWord: decodedWord,
-			data:        bytes[entryPtr+uint32(encodedWordLength) : entryPtr+uint32(header.length)],
+			data:        core.ReadSlice(entryPtr+uint32(encodedWordLength), entryPtr+uint32(header.length)),
 		}
 
 		entryPtr += uint32(header.length)

@@ -2,9 +2,10 @@ package zstring
 
 import (
 	"bytes"
-	"encoding/binary"
 	"os"
 	"testing"
+
+	"github.com/davetcode/goz/zcore"
 )
 
 var zstringDecodingTests = []struct {
@@ -27,9 +28,17 @@ var zstringEncodingTests = []struct {
 }
 
 func TestZStringDecoding(t *testing.T) {
+	storyFileBytes, err := os.ReadFile("../zork1.z1")
+	if err != nil {
+		panic("test story file missing")
+	}
+
+	core := zcore.LoadCore(storyFileBytes)
+
 	for _, tt := range zstringDecodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
-			zstr, bytesRead := Decode(tt.in, 0, uint32(len(tt.in)), tt.version, &defaultAlphabetsV1, 0, false)
+			core.Version = tt.version
+			zstr, bytesRead := Decode(0, uint32(len(tt.in)), &core, &defaultAlphabetsV1, false)
 
 			if tt.out != zstr {
 				t.Fatalf(`zstr read incorrectly expected=%s, actual=%s`, tt.out, zstr)
@@ -42,9 +51,16 @@ func TestZStringDecoding(t *testing.T) {
 }
 
 func TestZStringEncoding(t *testing.T) {
+	storyFileBytes, err := os.ReadFile("../zork1.z1")
+	if err != nil {
+		panic("test story file missing")
+	}
+
+	core := zcore.LoadCore(storyFileBytes)
+
 	for _, tt := range zstringEncodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
-			zstr := Encode([]rune(tt.in), tt.version, &defaultAlphabetsV1)
+			zstr := Encode([]rune(tt.in), &core, &defaultAlphabetsV1)
 
 			if !bytes.Equal(tt.out, zstr) {
 				t.Fatalf(`zstr encoded incorrectly expected=%s, actual=%s`, tt.out, zstr)
@@ -59,7 +75,9 @@ func TestV3Abbreviations(t *testing.T) {
 		panic("test story file missing")
 	}
 
-	str, _ := Decode(storyFileBytes, 0x44ef, 0x5000, 3, LoadAlphabets(3, storyFileBytes, 0), binary.BigEndian.Uint16(storyFileBytes[0x18:0x1a]), false)
+	core := zcore.LoadCore(storyFileBytes)
+
+	str, _ := Decode(0x44ef, 0x5000, &core, LoadAlphabets(&core), false)
 
 	if str != "Welcome to Adventure! Do you need instructions?" {
 		t.Fatalf("Invalid welcome string: %s", str)
@@ -67,5 +85,5 @@ func TestV3Abbreviations(t *testing.T) {
 }
 
 func TestV5PartialConstruction(t *testing.T) {
-
+	// TODO - Test case where a string has a partial construction which should get ignored
 }
