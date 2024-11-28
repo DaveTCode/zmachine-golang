@@ -132,77 +132,6 @@ var coreUnicodeTranslationTable = map[rune]uint8{
 	'}':  0x7d,
 	'~':  0x7e,
 }
-var defaultUnicodeTranslationTable = map[rune]uint8{
-	'ä': 155,
-	'ö': 156,
-	'ü': 157,
-	'Ä': 158,
-	'Ö': 159,
-	'Ü': 160,
-	'ß': 161,
-	'»': 162,
-	'«': 163,
-	'ë': 164,
-	'ï': 165,
-	'ÿ': 166,
-	'Ë': 167,
-	'Ï': 168,
-	'á': 169,
-	'é': 170,
-	'í': 171,
-	'ó': 172,
-	'ú': 173,
-	'ý': 174,
-	'Á': 175,
-	'É': 176,
-	'Í': 177,
-	'Ó': 178,
-	'Ú': 179,
-	'Ý': 180,
-	'à': 181,
-	'è': 182,
-	'ì': 183,
-	'ò': 184,
-	'ù': 185,
-	'À': 186,
-	'È': 187,
-	'Ì': 188,
-	'Ò': 189,
-	'Ù': 190,
-	'â': 191,
-	'ê': 192,
-	'î': 193,
-	'ô': 194,
-	'û': 195,
-	'Â': 196,
-	'Ê': 197,
-	'Î': 198,
-	'Ô': 199,
-	'Û': 200,
-	'å': 201,
-	'Å': 202,
-	'ø': 203,
-	'Ø': 204,
-	'ã': 205,
-	'ñ': 206,
-	'õ': 207,
-	'Ã': 208,
-	'Ñ': 209,
-	'Õ': 210,
-	'æ': 211,
-	'Æ': 212,
-	'ç': 213,
-	'Ç': 214,
-	'þ': 215,
-	'ð': 216,
-	'Þ': 217,
-	'Ð': 218,
-	'£': 219,
-	'œ': 220,
-	'Œ': 221,
-	'¡': 222,
-	'¿': 223,
-}
 
 type Alphabet int
 
@@ -260,7 +189,7 @@ func Encode(s []rune, core *zcore.Core, alphabets *Alphabets) []uint8 {
 				// 	// TODO - Handle passing through a custom unicode translation table on V5 if one is set in the story file
 				// 	panic("We don't handle custom unicode dictionaries yet")
 				// }
-				if zchr, ok := defaultUnicodeTranslationTable[chr]; ok {
+				if zchr, ok := unicodeToZscii(chr, core); ok {
 					zchrs = append(zchrs, zchr>>5)
 					zchrs = append(zchrs, zchr&0b1_1111)
 				}
@@ -380,17 +309,15 @@ func Decode(startPtr uint32, endPtr uint32, core *zcore.Core, alphabets *Alphabe
 			}
 		default:
 			// Escape code 6 on alphabet 2 means "ZSCII character" but in practice only 8 bit chars are valid so we can get away
-			// with casting down to uint8 here. Maybe not strictly accurate and would be worth revisiting - TODO
+			// with casting down to uint8 here
 			if currentAlphabet == 2 && zchr == 6 {
 				if len(zchrStream) > i+2 { // Ignore partial constructions
-					// TODO - This is shockingly bad code and doesn't handle custom unicode translation tables
-					unicodeTranslationTableIx := zchrStream[i+1]<<5 | (zchrStream[i+2] & 0b1_1111)
-					for r, ix := range defaultUnicodeTranslationTable {
-						if ix == unicodeTranslationTableIx {
-							chrStream = append(chrStream, r)
-						}
+					r, ok := ZsciiToUnicode(uint8((zchrStream[i+1]<<5)|(zchrStream[i+2]&0b1_1111)), core)
+					if ok {
+						chrStream = append(chrStream, r)
+					} else {
+						chrStream = append(chrStream, 0) // TODO - Is anything better than 0 for printing unknown unicode?
 					}
-					// TODO - And what if the character doesn't appear at all???
 				}
 				i += 2
 			} else {

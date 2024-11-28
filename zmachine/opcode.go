@@ -56,7 +56,7 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 	operandTypeByteExtendedCall := uint8(0)
 	maxVariables := 4
 
-	if (opcode.opcodeNumber == 12 || opcode.opcodeNumber == 26) && opcode.operandCount == VAR {
+	if (opcode.opcodeNumber == 12 || opcode.opcodeNumber == 26) && opcode.operandCount == VAR && opcode.opcodeForm != extForm {
 		operandTypeByteExtendedCall = z.readIncPC(frame)
 		maxVariables = 8
 	}
