@@ -866,8 +866,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 0x0b: // PRINT_UNICODE
 				chr := opcode.operands[0].Value(z)
-				unicode, _ := zstring.ZsciiToUnicode(uint8(chr), &z.Core)
-				z.appendText(string(unicode))
+				z.appendText(string(chr))
 
 			case 0x0c: // CHECK_UNICODE
 				chr := opcode.operands[0].Value(z)
