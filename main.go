@@ -33,22 +33,23 @@ const (
 )
 
 type applicationModel struct {
-	outputChannel           <-chan interface{}
-	sendChannel             chan<- string
-	zMachine                *zmachine.ZMachine
-	statusBar               zmachine.StatusBar
-	screenModel             zmachine.ScreenModel
-	lowerWindowText         string
-	upperWindowText         []string
-	upperWindowStyle        [][]lipgloss.Style
-	appState                appState
-	inputBox                textinput.Model
-	width                   int
-	height                  int
-	backgroundStyle         lipgloss.Style
-	statusBarStyle          lipgloss.Style
-	upperWindowStyleCurrent lipgloss.Style
-	lowerWindowStyle        lipgloss.Style
+	outputChannel            <-chan interface{}
+	sendChannel              chan<- string
+	zMachine                 *zmachine.ZMachine
+	statusBar                zmachine.StatusBar
+	screenModel              zmachine.ScreenModel
+	lowerWindowTextPreStyled string
+	lowerWindowText          string
+	upperWindowText          []string
+	upperWindowStyle         [][]lipgloss.Style
+	appState                 appState
+	inputBox                 textinput.Model
+	width                    int
+	height                   int
+	backgroundStyle          lipgloss.Style
+	statusBarStyle           lipgloss.Style
+	upperWindowStyleCurrent  lipgloss.Style
+	lowerWindowStyle         lipgloss.Style
 }
 
 func (m applicationModel) Init() tea.Cmd {
@@ -116,7 +117,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case textUpdateMessage:
 		if m.screenModel.LowerWindowActive {
 			// In anything other than v6 the bottom window is append only (I think - TODO)
-			m.lowerWindowText += m.lowerWindowStyle.Render(string(msg))
+			m.lowerWindowText += string(msg)
 		} else {
 			if m.screenModel.UpperWindowCursorY > 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
 				row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
@@ -189,6 +190,13 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Italic(m.screenModel.UpperWindowTextStyle&zmachine.Italic == zmachine.Italic).
 			Reverse(m.screenModel.UpperWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
 
+		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
+		// model to avoid performance hit by too many ascii codes
+		if m.lowerWindowText != "" {
+			m.lowerWindowTextPreStyled += m.lowerWindowStyle.Render(m.lowerWindowText)
+			m.lowerWindowText = ""
+		}
+
 		return m, waitForInterpreter(m.outputChannel)
 	}
 
@@ -249,7 +257,8 @@ func (m applicationModel) View() string {
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
 	// can change during screen usage
-	wordWrappedBody := wordwrap.String(m.lowerWindowText, m.width)
+	fullLowerWindowText := m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
+	wordWrappedBody := wordwrap.String(fullLowerWindowText, m.width)
 
 	lines := strings.Split(wordWrappedBody, "\n")
 
