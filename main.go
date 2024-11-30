@@ -81,7 +81,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.upperWindowText = m.upperWindowText[:m.height]
 			m.upperWindowStyle = m.upperWindowStyle[:m.height]
 		} else {
-			for range m.height - len(m.upperWindowText) {
+			for range int(math.Min(float64(m.height-len(m.upperWindowText)), float64(m.screenModel.UpperWindowHeight))) {
 				m.upperWindowText = append(m.upperWindowText, strings.Repeat(" ", m.width))
 				m.upperWindowStyle = append(m.upperWindowStyle, slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width))
 			}
@@ -189,6 +189,10 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Bold(m.screenModel.UpperWindowTextStyle&zmachine.Bold == zmachine.Bold).
 			Italic(m.screenModel.UpperWindowTextStyle&zmachine.Italic == zmachine.Italic).
 			Reverse(m.screenModel.UpperWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
+		m.statusBarStyle = m.lowerWindowStyle.Reverse(true)
+		m.backgroundStyle = m.backgroundStyle.
+			Background(lipgloss.Color(m.screenModel.LowerWindowBackground.ToHex())).
+			Foreground(lipgloss.Color(m.screenModel.LowerWindowForeground.ToHex()))
 
 		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
 		// model to avoid performance hit by too many ascii codes
@@ -257,7 +261,13 @@ func (m applicationModel) View() string {
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
 	// can change during screen usage
-	fullLowerWindowText := m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
+	var fullLowerWindowText string
+	if m.lowerWindowText != "" && m.lowerWindowText[len(m.lowerWindowText)-1] == '>' {
+		fullLowerWindowText = m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText[:len(m.lowerWindowText)-1])
+	} else {
+		fullLowerWindowText = m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
+	}
+
 	wordWrappedBody := wordwrap.String(fullLowerWindowText, m.width)
 
 	lines := strings.Split(wordWrappedBody, "\n")
@@ -269,7 +279,7 @@ func (m applicationModel) View() string {
 
 	if m.appState == appWaitingForInput {
 		// TODO - Can we use a nicer style for this somehow?
-		s.WriteString(m.lowerWindowStyle.Render(m.inputBox.View()))
+		s.WriteString(m.lowerWindowStyle.Inline(true).Render("> " + m.inputBox.View()))
 	}
 
 	return m.backgroundStyle.
@@ -311,8 +321,6 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 	ti.Width = 20
 	ti.Prompt = ""
 
-	bgStyle := lipgloss.NewStyle().Background(lipgloss.Color("#ffffff")).Foreground(lipgloss.Color("#000000"))
-
 	return applicationModel{
 		outputChannel:           outputChannel,
 		sendChannel:             inputChannel,
@@ -321,8 +329,8 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 		inputBox:                ti,
 		upperWindowStyleCurrent: lipgloss.NewStyle(),
 		lowerWindowStyle:        lipgloss.NewStyle(),
-		backgroundStyle:         bgStyle,
-		statusBarStyle:          bgStyle.Reverse(true),
+		statusBarStyle:          lipgloss.NewStyle(),
+		backgroundStyle:         lipgloss.NewStyle(),
 	}
 }
 
@@ -338,7 +346,7 @@ func main() {
 
 	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
 
-	tui := tea.NewProgram(appModel) //, tea.WithAltScreen())
+	tui := tea.NewProgram(appModel, tea.WithAltScreen())
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)

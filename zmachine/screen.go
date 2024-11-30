@@ -80,13 +80,13 @@ func newScreenModel(foregroundColor Color, backgroundColor Color) ScreenModel {
 	return ScreenModel{
 		LowerWindowActive:     true,
 		UpperWindowHeight:     0,
-		UpperWindowForeground: backgroundColor,
-		UpperWindowBackground: foregroundColor,
+		UpperWindowForeground: foregroundColor,
+		UpperWindowBackground: backgroundColor,
 		UpperWindowCursorX:    1,
 		UpperWindowCursorY:    1,
 		UpperWindowTextStyle:  Roman,
-		LowerWindowForeground: foregroundColor,
-		LowerWindowBackground: backgroundColor,
+		LowerWindowForeground: backgroundColor,
+		LowerWindowBackground: foregroundColor,
 		LowerWindowTextStyle:  Roman,
 	}
 }
