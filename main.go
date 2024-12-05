@@ -28,8 +28,9 @@ type ScreenModelMessage zmachine.ScreenModel
 type appState int
 
 const (
-	appRunning         appState = iota
-	appWaitingForInput appState = iota
+	appRunning             appState = iota
+	appWaitingForInput     appState = iota
+	appWaitingForCharacter appState = iota
 )
 
 type applicationModel struct {
@@ -105,13 +106,19 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			os.Exit(0)
 		}
 
-		switch msg.Type {
-		case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
+		if m.appState == appWaitingForCharacter {
 			m.appState = appRunning
-			m.lowerWindowText += m.inputBox.Value() + "\n"
-			m.sendChannel <- m.inputBox.Value()
-			m.inputBox.SetValue("")
+			m.sendChannel <- msg.Type.String()
 			return m, nil
+		} else {
+			switch msg.Type {
+			case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
+				m.appState = appRunning
+				m.lowerWindowText += m.inputBox.Value() + "\n"
+				m.sendChannel <- m.inputBox.Value()
+				m.inputBox.SetValue("")
+				return m, nil
+			}
 		}
 
 	case textUpdateMessage:
@@ -122,6 +129,9 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.screenModel.UpperWindowCursorY > 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
 				row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
 				text := string(msg)
+				if text != " " {
+					text += ""
+				}
 
 				// Need to track what style each rune is written in so we can track cursor position based on runes but still
 				// render using the original style they were written with. Rendering first will fill the text with ansi chars
@@ -149,6 +159,8 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch zmachine.StateChangeRequest(msg) {
 		case zmachine.WaitForInput:
 			m.appState = appWaitingForInput
+		case zmachine.WaitForCharacter:
+			m.appState = appWaitingForCharacter
 		case zmachine.Running:
 			m.appState = appRunning
 		}
@@ -249,12 +261,28 @@ func (m applicationModel) View() string {
 		lowerWindowHeight -= m.screenModel.UpperWindowHeight
 
 		var text strings.Builder
+		var currentText strings.Builder
+		var currentStyle lipgloss.Style
 		for row, styleRow := range m.upperWindowStyle {
 			for col, chrStyle := range styleRow {
-				chr := string([]rune(m.upperWindowText[row])[col])
-				text.WriteString(chrStyle.Render(chr))
+				if chrStyle.GetBackground() != currentStyle.GetBackground() ||
+					chrStyle.GetForeground() != currentStyle.GetForeground() ||
+					chrStyle.GetBlink() != currentStyle.GetBlink() ||
+					chrStyle.GetBold() != currentStyle.GetBold() ||
+					chrStyle.GetItalic() != currentStyle.GetItalic() ||
+					chrStyle.GetReverse() != currentStyle.GetReverse() {
+					if currentText.Len() > 0 {
+						text.WriteString(currentStyle.Render(currentText.String()))
+					}
+					currentStyle = chrStyle
+					currentText.Reset()
+				}
+				currentText.WriteRune([]rune(m.upperWindowText[row])[col])
 			}
-			text.WriteByte('\n')
+			currentText.WriteByte('\n')
+		}
+		if currentText.Len() > 0 {
+			text.WriteString(currentStyle.Render(currentText.String()))
 		}
 		s.WriteString(text.String())
 	}

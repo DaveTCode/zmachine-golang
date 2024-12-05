@@ -27,8 +27,9 @@ type Quit bool
 type StateChangeRequest int
 
 const (
-	WaitForInput StateChangeRequest = iota
-	Running      StateChangeRequest = iota
+	WaitForInput     StateChangeRequest = iota
+	WaitForCharacter StateChangeRequest = iota
+	Running          StateChangeRequest = iota
 )
 
 type RoutineType int
@@ -954,8 +955,8 @@ func (z *ZMachine) StepMachine() bool {
 				z.call(&opcode, function)
 
 			case 15: // SET_CURSOR
-				x := opcode.operands[0].Value(z)
-				y := opcode.operands[1].Value(z)
+				line := opcode.operands[0].Value(z)
+				col := opcode.operands[1].Value(z)
 
 				if z.Core.Version == 6 {
 					panic("Cursors are more complex on v6")
@@ -963,8 +964,8 @@ func (z *ZMachine) StepMachine() bool {
 
 				// TODO - Pretty sure you can't set the cursor on lower window v<=5
 				if !z.screenModel.LowerWindowActive {
-					z.screenModel.UpperWindowCursorX = int(x)
-					z.screenModel.UpperWindowCursorY = int(y)
+					z.screenModel.UpperWindowCursorX = int(col)
+					z.screenModel.UpperWindowCursorY = int(line)
 					z.outputChannel <- z.screenModel
 				}
 
@@ -1018,6 +1019,12 @@ func (z *ZMachine) StepMachine() bool {
 				case 4, -4:
 					z.streams.CommandScript = stream > 0
 				}
+
+			case 22: // READ_CHAR
+				z.outputChannel <- WaitForCharacter
+				rawText := <-z.inputChannel
+
+				z.writeVariable(z.readIncPC(frame), uint16(rawText[0]), false)
 
 			case 23: // SCAN_TABLE
 				test := opcode.operands[0].Value(z)
