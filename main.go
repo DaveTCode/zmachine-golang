@@ -22,6 +22,7 @@ var (
 
 type textUpdateMessage string
 type stateUpdateMessage zmachine.StateChangeRequest
+type eraseWindowRequest zmachine.EraseWindowRequest
 type StatusBarMessage zmachine.StatusBar
 type ScreenModelMessage zmachine.ScreenModel
 
@@ -108,8 +109,7 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.appState == appWaitingForCharacter {
 			m.appState = appRunning
-			m.sendChannel <- msg.Type.String()
-			return m, nil
+			m.sendChannel <- string(msg.Runes[0])
 		} else {
 			switch msg.Type {
 			case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
@@ -117,7 +117,6 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.lowerWindowText += m.inputBox.Value() + "\n"
 				m.sendChannel <- m.inputBox.Value()
 				m.inputBox.SetValue("")
-				return m, nil
 			}
 		}
 
@@ -214,6 +213,29 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, waitForInterpreter(m.outputChannel)
+
+	case eraseWindowRequest:
+		switch int(msg) {
+		case -2: // Keep split windows and clear both
+			m.lowerWindowText = ""
+			for row := range m.screenModel.UpperWindowHeight {
+				m.upperWindowText[row] = strings.Repeat(" ", m.width)
+				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
+			}
+		case -1: // Unsplit the window and clear
+			m.lowerWindowText = ""
+		case 0:
+			m.lowerWindowText = ""
+		case 1:
+			for row := range m.screenModel.UpperWindowHeight {
+				m.upperWindowText[row] = strings.Repeat(" ", m.width)
+				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
+			}
+		default:
+			panic("TODO Why are we clearing windows > 1? Needs better error handling but possibly indicates an interpreter bug so panicing for now")
+		}
+
+		return m, waitForInterpreter(m.outputChannel)
 	}
 
 	if m.appState == appWaitingForInput {
@@ -289,12 +311,7 @@ func (m applicationModel) View() string {
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
 	// can change during screen usage
-	var fullLowerWindowText string
-	if m.lowerWindowText != "" && m.lowerWindowText[len(m.lowerWindowText)-1] == '>' {
-		fullLowerWindowText = m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText[:len(m.lowerWindowText)-1])
-	} else {
-		fullLowerWindowText = m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
-	}
+	fullLowerWindowText := m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
 
 	wordWrappedBody := wordwrap.String(fullLowerWindowText, m.width)
 
@@ -307,7 +324,7 @@ func (m applicationModel) View() string {
 
 	if m.appState == appWaitingForInput {
 		// TODO - Can we use a nicer style for this somehow?
-		s.WriteString(m.lowerWindowStyle.Inline(true).Render("> " + m.inputBox.View()))
+		s.WriteString(m.lowerWindowStyle.Render("\n" + m.inputBox.View()))
 	}
 
 	return m.backgroundStyle.
@@ -322,6 +339,8 @@ func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
 		switch msg := msg.(type) {
 		case zmachine.StateChangeRequest:
 			return stateUpdateMessage(msg)
+		case zmachine.EraseWindowRequest:
+			return eraseWindowRequest(msg)
 		case zmachine.StatusBar:
 			return StatusBarMessage(msg)
 		case zmachine.ScreenModel:

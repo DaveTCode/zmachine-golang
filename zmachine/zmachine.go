@@ -24,6 +24,8 @@ type StatusBar struct {
 
 type Quit bool
 
+type EraseWindowRequest int
+
 type StateChangeRequest int
 
 const (
@@ -953,6 +955,17 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 12: // CALL_VS2
 				z.call(&opcode, function)
+
+			case 13: // ERASE_WINDOW
+				window := int16(opcode.operands[0].Value(z))
+
+				if window == 1 {
+					z.screenModel.LowerWindowActive = true
+					z.screenModel.UpperWindowHeight = 0
+					z.outputChannel <- z.screenModel
+				}
+
+				z.outputChannel <- EraseWindowRequest(window)
 
 			case 15: // SET_CURSOR
 				line := opcode.operands[0].Value(z)
