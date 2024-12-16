@@ -8,9 +8,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/davetcode/goz/selectstoryui"
 	"github.com/davetcode/goz/zmachine"
 	"github.com/muesli/reflow/wordwrap"
 )
@@ -23,18 +25,18 @@ var (
 type textUpdateMessage string
 type stateUpdateMessage zmachine.StateChangeRequest
 type eraseWindowRequest zmachine.EraseWindowRequest
-type StatusBarMessage zmachine.StatusBar
-type ScreenModelMessage zmachine.ScreenModel
+type statusBarMessage zmachine.StatusBar
+type screenModelMessage zmachine.ScreenModel
 
-type appState int
+type runningStoryState int
 
 const (
-	appRunning             appState = iota
-	appWaitingForInput     appState = iota
-	appWaitingForCharacter appState = iota
+	appRunning             runningStoryState = iota
+	appWaitingForInput     runningStoryState = iota
+	appWaitingForCharacter runningStoryState = iota
 )
 
-type applicationModel struct {
+type runStoryModel struct {
 	outputChannel            <-chan interface{}
 	sendChannel              chan<- string
 	zMachine                 *zmachine.ZMachine
@@ -44,7 +46,7 @@ type applicationModel struct {
 	lowerWindowText          string
 	upperWindowText          []string
 	upperWindowStyle         [][]lipgloss.Style
-	appState                 appState
+	appState                 runningStoryState
 	inputBox                 textinput.Model
 	width                    int
 	height                   int
@@ -54,11 +56,14 @@ type applicationModel struct {
 	lowerWindowStyle         lipgloss.Style
 }
 
-func (m applicationModel) Init() tea.Cmd {
+func (m runStoryModel) Init() tea.Cmd {
 	return tea.Batch(
 		waitForInterpreter(m.outputChannel),
 		runInterpreter(m.zMachine),
-		tea.SetWindowTitle(romFilePath),
+		tea.Sequence(
+			tea.SetWindowTitle(romFilePath),
+			tea.WindowSize(),
+		),
 	)
 }
 
@@ -70,7 +75,7 @@ func runInterpreter(z *zmachine.ZMachine) tea.Cmd {
 	}
 }
 
-func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -165,11 +170,11 @@ func (m applicationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, waitForInterpreter(m.outputChannel)
 
-	case StatusBarMessage:
+	case statusBarMessage:
 		m.statusBar = zmachine.StatusBar(msg)
 		return m, waitForInterpreter(m.outputChannel)
 
-	case ScreenModelMessage:
+	case screenModelMessage:
 		m.screenModel = zmachine.ScreenModel(msg)
 		if len(m.upperWindowText) != m.screenModel.UpperWindowHeight {
 			if m.zMachine.Core.Version == 3 {
@@ -266,7 +271,7 @@ func createStatusLine(width int, placeName string, scoreOrHours int, movesOrMinu
 	return fmt.Sprintf("%s%s%s", placeName, strings.Repeat(" ", numberSpaces), rightHandSide)
 }
 
-func (m applicationModel) View() string {
+func (m runStoryModel) View() string {
 	// Wait until the screen has loaded properly to print anything
 	if m.width == 0 || m.height == 0 {
 		return "Initializing..."
@@ -342,9 +347,9 @@ func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
 		case zmachine.EraseWindowRequest:
 			return eraseWindowRequest(msg)
 		case zmachine.StatusBar:
-			return StatusBarMessage(msg)
+			return statusBarMessage(msg)
 		case zmachine.ScreenModel:
-			return ScreenModelMessage(msg)
+			return screenModelMessage(msg)
 		case string:
 			return textUpdateMessage(msg)
 		case zmachine.Quit:
@@ -356,11 +361,11 @@ func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
 }
 
 func init() {
-	flag.StringVar(&romFilePath, "rom", "zork1.z1", "The path of a z-machine rom")
+	flag.StringVar(&romFilePath, "rom", "", "The path of a z-machine rom")
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan interface{}) applicationModel {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan interface{}) tea.Model {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -368,7 +373,7 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 	ti.Width = 20
 	ti.Prompt = ""
 
-	return applicationModel{
+	return runStoryModel{
 		outputChannel:           outputChannel,
 		sendChannel:             inputChannel,
 		zMachine:                zMachine,
@@ -382,18 +387,27 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 }
 
 func main() {
-	zMachineOutputChannel := make(chan interface{})
-	zMachineInputChannel := make(chan string)
+	var model tea.Model
 
-	romFileBytes, err := os.ReadFile(romFilePath)
-	if err != nil {
-		panic(err)
+	if romFilePath != "" {
+		romFileBytes, err := os.ReadFile(romFilePath)
+		if err != nil {
+			panic(err)
+		}
+		zMachineOutputChannel := make(chan interface{})
+		zMachineInputChannel := make(chan string)
+		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
+
+		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
+	} else {
+		model = selectstoryui.SelectStoryModel{
+			State:                  selectstoryui.LoadingStoryList,
+			StoryList:              list.New(make([]list.Item, 0), list.NewDefaultDelegate(), 0, 0),
+			CreateApplicationModel: newApplicationModel,
+		}
 	}
-	zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
 
-	appModel := newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
-
-	tui := tea.NewProgram(appModel, tea.WithAltScreen())
+	tui := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)
