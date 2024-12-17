@@ -1,6 +1,7 @@
 package selectstoryui
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/davetcode/goz/zmachine"
@@ -21,7 +23,7 @@ type selectStoryState int
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 const (
-	LoadingStoryList selectStoryState = iota
+	loadingStoryList selectStoryState = iota
 	choosingStory    selectStoryState = iota
 	downloadingStory selectStoryState = iota
 )
@@ -39,11 +41,12 @@ func (s story) Title() string       { return s.name }
 func (s story) Description() string { return s.description }
 func (s story) FilterValue() string { return s.name + s.description }
 
-type SelectStoryModel struct {
-	State                  selectStoryState
-	StoryList              list.Model
+type selectStoryModel struct {
+	state                  selectStoryState
+	storyList              list.Model
+	spinner                spinner.Model
 	err                    error
-	CreateApplicationModel func(*zmachine.ZMachine, chan<- string, <-chan interface{}) tea.Model
+	createApplicationModel func(*zmachine.ZMachine, chan<- string, <-chan interface{}) tea.Model
 }
 
 type storiesDownloadedMsg []list.Item
@@ -53,21 +56,33 @@ type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
-func (m SelectStoryModel) Init() tea.Cmd {
-	m.StoryList.Title = "Z-Machine stories from ifarchive"
+func NewUIModel(createAppModel func(*zmachine.ZMachine, chan<- string, <-chan interface{}) tea.Model) tea.Model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	return selectStoryModel{
+		state:                  loadingStoryList,
+		storyList:              list.New(make([]list.Item, 0), list.NewDefaultDelegate(), 0, 0),
+		createApplicationModel: createAppModel,
+		spinner:                s,
+	}
+}
+
+func (m selectStoryModel) Init() tea.Cmd {
+	m.storyList.SetShowTitle(false)
 	return downloadStoryList
 }
 
-func (m SelectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m selectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
 			return m, tea.Quit
 		case "enter":
-			s, selected := m.StoryList.SelectedItem().(story)
+			s, selected := m.storyList.SelectedItem().(story)
 			if selected {
-				m.State = downloadingStory
+				m.state = downloadingStory
 
 				return m, downloadStory(s)
 			}
@@ -75,34 +90,54 @@ func (m SelectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
-		m.StoryList.SetSize(msg.Width-h, msg.Height-v)
+		m.storyList.SetSize(msg.Width-h, msg.Height-v)
 
 	case storiesDownloadedMsg:
-		return m, m.StoryList.SetItems([]list.Item(msg))
+		m.state = choosingStory
+		m.storyList.SetShowStatusBar(false)
+		m.storyList.SetShowTitle(false)
+		return m, m.storyList.SetItems([]list.Item(msg))
 
 	case downloadedStoryMsg:
 		zMachineOutputChannel := make(chan interface{})
 		zMachineInputChannel := make(chan string)
 		zMachine := zmachine.LoadRom([]uint8(msg), zMachineInputChannel, zMachineOutputChannel)
 
-		newModel := m.CreateApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
+		newModel := m.createApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
 		return newModel, newModel.Init()
 
 	case errMsg:
 		m.err = msg
 		return m, nil
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 
 	var cmd tea.Cmd
-	m.StoryList, cmd = m.StoryList.Update(msg)
+	m.storyList, cmd = m.storyList.Update(msg)
 	return m, cmd
 }
 
-func (m SelectStoryModel) View() string {
+func (m selectStoryModel) View() string {
 	if m.err != nil {
 		return docStyle.Render(m.err.Error())
+	} else {
+		switch m.state {
+		case loadingStoryList:
+			str := fmt.Sprintf("\n\n   %s Loading stories...\n\n", m.spinner.View())
+			return str
+		case choosingStory:
+			return docStyle.Render(m.storyList.View())
+		case downloadingStory:
+			str := fmt.Sprintf("\n\n   %s Downloading story...\n\n", m.spinner.View())
+			return str
+		default:
+			return ""
+		}
 	}
-	return docStyle.Render(m.StoryList.View())
 }
 
 func downloadStory(s story) tea.Cmd {
@@ -148,7 +183,7 @@ func downloadStoryList() tea.Msg {
 
 	doc.Find("dl dt").Each(func(i int, s *goquery.Selection) {
 		// For each item found, get the title
-		title := s.Find("a").Text()
+		title := strings.Replace(s.Find("a").Text(), "◆", "", 1)
 		href, _ := s.Find("a").Attr("href")
 		match, _ := regexp.Match(".*\\.z[12345678]", []byte(href))
 

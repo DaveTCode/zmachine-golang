@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -400,11 +399,7 @@ func main() {
 
 		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
 	} else {
-		model = selectstoryui.SelectStoryModel{
-			State:                  selectstoryui.LoadingStoryList,
-			StoryList:              list.New(make([]list.Item, 0), list.NewDefaultDelegate(), 0, 0),
-			CreateApplicationModel: newApplicationModel,
-		}
+		model = selectstoryui.NewUIModel(newApplicationModel)
 	}
 
 	tui := tea.NewProgram(model, tea.WithAltScreen())
