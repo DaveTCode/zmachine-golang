@@ -289,7 +289,7 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 	currentLocation := startingLocation
 
 	for _, chr := range z.Core.ReadSlice(startingLocation, z.Core.MemoryLength()) {
-		if (z.Core.Version < 5 && chr == 0) || (z.Core.Version >= 5 && currentLocation-startingLocation >= chrCount) {
+		if (z.Core.Version < 5 && chr == 0) || (z.Core.Version >= 5 && currentLocation-(baddr1+2) >= chrCount) {
 			words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
 			break
 		}
