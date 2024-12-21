@@ -26,6 +26,14 @@ type Dictionary struct {
 	entries []Entry
 }
 
+func (d *Dictionary) GetWords() []string {
+	var words = make([]string, len(d.entries))
+	for i, entry := range d.entries {
+		words[i] = entry.decodedWord
+	}
+	return words
+}
+
 func ParseDictionary(baseAddress uint32, core *zcore.Core, alphabets *zstring.Alphabets) *Dictionary {
 	dictionaryPtr := baseAddress
 	numInputCodes := core.ReadByte(dictionaryPtr)

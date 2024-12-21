@@ -22,7 +22,8 @@ var (
 )
 
 type textUpdateMessage string
-type stateUpdateMessage zmachine.StateChangeRequest
+type waitForInputMessage zmachine.WaitForInputRequest
+type waitForCharacterMessage zmachine.WaitForCharacterRequest
 type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
@@ -158,15 +159,13 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, waitForInterpreter(m.outputChannel)
 
-	case stateUpdateMessage:
-		switch zmachine.StateChangeRequest(msg) {
-		case zmachine.WaitForInput:
-			m.appState = appWaitingForInput
-		case zmachine.WaitForCharacter:
-			m.appState = appWaitingForCharacter
-		case zmachine.Running:
-			m.appState = appRunning
-		}
+	case waitForCharacterMessage:
+		m.appState = appWaitingForCharacter
+		return m, waitForInterpreter(m.outputChannel)
+
+	case waitForInputMessage:
+		m.appState = appWaitingForInput
+		m.inputBox.SetSuggestions([]string(msg))
 		return m, waitForInterpreter(m.outputChannel)
 
 	case statusBarMessage:
@@ -212,7 +211,7 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
 		// model to avoid performance hit by too many ascii codes
 		if m.lowerWindowText != "" {
-			m.lowerWindowTextPreStyled += m.lowerWindowStyle.Render(m.lowerWindowText)
+			m.lowerWindowTextPreStyled += m.lowerWindowText //m.lowerWindowStyle.Render(m.lowerWindowText)
 			m.lowerWindowText = ""
 		}
 
@@ -315,7 +314,20 @@ func (m runStoryModel) View() string {
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
 	// can change during screen usage
-	fullLowerWindowText := m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
+	fullLowerWindowText := m.lowerWindowTextPreStyled
+	if m.lowerWindowText != "" {
+		lines := strings.Split(m.lowerWindowText, "\n")
+		renderedLines := make([]string, len(lines))
+		for i, line := range lines {
+			renderedLines[i] = m.lowerWindowStyle.Inline(true).Render(line)
+		}
+		fullLowerWindowText += strings.Join(renderedLines, "\n")
+	}
+	if m.appState == appWaitingForInput {
+		lines := strings.Split(fullLowerWindowText, "\n")
+		lines[len(lines)-1] += m.inputBox.View()
+		fullLowerWindowText = strings.Join(lines, "\n")
+	}
 
 	wordWrappedBody := wordwrap.String(fullLowerWindowText, m.width)
 
@@ -325,11 +337,6 @@ func (m runStoryModel) View() string {
 		lines = lines[len(lines)-lowerWindowHeight+2:]
 	}
 	s.WriteString(strings.Join(lines, "\n"))
-
-	if m.appState == appWaitingForInput {
-		// TODO - Can we use a nicer style for this somehow?
-		s.WriteString(m.lowerWindowStyle.Render("\n" + m.inputBox.View()))
-	}
 
 	return m.backgroundStyle.
 		Width(m.width).
@@ -341,8 +348,10 @@ func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
 	return func() tea.Msg {
 		msg := <-sub
 		switch msg := msg.(type) {
-		case zmachine.StateChangeRequest:
-			return stateUpdateMessage(msg)
+		case zmachine.WaitForCharacterRequest:
+			return waitForCharacterMessage(msg)
+		case zmachine.WaitForInputRequest:
+			return waitForInputMessage(msg)
 		case zmachine.EraseWindowRequest:
 			return eraseWindowRequest(msg)
 		case zmachine.StatusBar:
@@ -371,6 +380,7 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 	ti.CharLimit = 156
 	ti.Width = 20
 	ti.Prompt = ""
+	ti.ShowSuggestions = true
 
 	return runStoryModel{
 		outputChannel:           outputChannel,

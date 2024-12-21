@@ -26,6 +26,18 @@
       ]
     },
     {
+      "name": "Launch ragnarok.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/ragnarok.z5"
+      ]
+    },
+    {
       "name": "Launch cheater.z5",
       "type": "go",
       "request": "launch",

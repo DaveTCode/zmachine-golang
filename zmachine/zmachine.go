@@ -23,16 +23,9 @@ type StatusBar struct {
 }
 
 type Quit bool
-
 type EraseWindowRequest int
-
-type StateChangeRequest int
-
-const (
-	WaitForInput     StateChangeRequest = iota
-	WaitForCharacter StateChangeRequest = iota
-	Running          StateChangeRequest = iota
-)
+type WaitForInputRequest []string
+type WaitForCharacterRequest bool
 
 type RoutineType int
 
@@ -459,7 +452,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	// TODO - Handle timed interrupts of the read function
 	// TODO - Somehow let UI know how many chars to accept
-	z.outputChannel <- WaitForInput
+	z.outputChannel <- WaitForInputRequest(z.dictionary.GetWords())
 	rawText := <-z.inputChannel
 	textBufferPtr := opcode.operands[0].Value(z)
 	parseBufferPtr := opcode.operands[1].Value(z)
@@ -1034,7 +1027,7 @@ func (z *ZMachine) StepMachine() bool {
 				}
 
 			case 22: // READ_CHAR
-				z.outputChannel <- WaitForCharacter
+				z.outputChannel <- WaitForCharacterRequest(true)
 				rawText := <-z.inputChannel
 
 				z.writeVariable(z.readIncPC(frame), uint16(rawText[0]), false)
