@@ -170,9 +170,9 @@ func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<-
 	// TODO - Is the dictionary static? If not shouldn't cache like this
 	machine.dictionary = dictionary.ParseDictionary(uint32(machine.Core.DictionaryBase), &machine.Core, machine.Alphabets)
 
-	machine.Core.SetDefaultBackgroundColorNumber(uint8(Black))
-	machine.Core.SetDefaultForegroundColorNumber(uint8(White))
-	machine.screenModel = newScreenModel(Black, White)
+	machine.Core.SetDefaultBackgroundColorNumber(2)
+	machine.Core.SetDefaultForegroundColorNumber(9)
+	machine.screenModel = newScreenModel(Color{0, 0, 0}, Color{255, 255, 255})
 
 	// V6+ uses a packed address and a routine for the initial function
 	if machine.Core.Version == 6 {
@@ -811,7 +811,17 @@ func (z *ZMachine) StepMachine() bool {
 			if z.Core.Version < 5 {
 				panic("Invalid set_colour routine on v1-4")
 			}
-			// TODO - Can we ever support colours?
+
+			foreground := z.screenModel.NewZMachineColor(opcode.operands[0].Value(z), true)
+			background := z.screenModel.NewZMachineColor(opcode.operands[1].Value(z), false)
+			if z.screenModel.LowerWindowActive {
+				z.screenModel.LowerWindowForeground = foreground
+				z.screenModel.LowerWindowBackground = background
+			} else {
+				z.screenModel.UpperWindowForeground = foreground
+				z.screenModel.UpperWindowBackground = background
+			}
+			z.outputChannel <- z.screenModel
 
 		case 28: // throw
 			if z.Core.Version < 5 {
@@ -858,6 +868,10 @@ func (z *ZMachine) StepMachine() bool {
 
 				z.writeVariable(z.readIncPC(frame), result, false)
 
+			case 0x04: // SET_FONT
+				opcode.operands[0].Value(z)
+				// TODO - Ignoring this for now to see impact on beyond zork
+
 			case 0x09: // SAVE_UNDO
 				z.saveUndo()
 				z.writeVariable(z.readIncPC(frame), uint16(1), false) // Save always succeeds in this environment
@@ -879,7 +893,21 @@ func (z *ZMachine) StepMachine() bool {
 				}
 
 			case 0x0d: // SET_TRUE_COLOUR
-				// TODO - Can we ever support colours?
+				foreground := opcode.operands[0].Value(z)
+				background := opcode.operands[1].Value(z)
+
+				// TODO - Handle current/default options here although no story files found using it!
+
+				fgColor := Color{int(foreground&0b11111) * 32, int((foreground>>5)&0b11111) * 32, int((foreground>>10)&0b11111) * 32}
+				bgColor := Color{int(background&0b11111) * 32, int((background>>5)&0b11111) * 32, int((background>>10)&0b11111) * 32}
+
+				if z.screenModel.LowerWindowActive {
+					z.screenModel.LowerWindowForeground = fgColor
+					z.screenModel.LowerWindowBackground = bgColor
+				} else {
+					z.screenModel.UpperWindowForeground = fgColor
+					z.screenModel.UpperWindowBackground = bgColor
+				}
 
 			default:
 				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))

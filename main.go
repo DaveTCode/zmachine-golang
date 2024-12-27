@@ -196,6 +196,10 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
+		// model to avoid performance hit by too many ascii codes
+		prerenderLowerWindowText(&m)
+
 		m.lowerWindowStyle = m.lowerWindowStyle.
 			Background(lipgloss.Color(m.screenModel.LowerWindowBackground.ToHex())).
 			Foreground(lipgloss.Color(m.screenModel.LowerWindowForeground.ToHex())).
@@ -211,12 +215,8 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Reverse(m.screenModel.UpperWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
 		m.statusBarStyle = m.lowerWindowStyle.Reverse(true)
 		m.backgroundStyle = m.backgroundStyle.
-			Background(lipgloss.Color(m.screenModel.LowerWindowBackground.ToHex())).
-			Foreground(lipgloss.Color(m.screenModel.LowerWindowForeground.ToHex()))
-
-		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
-		// model to avoid performance hit by too many ascii codes
-		prerenderLowerWindowText(&m)
+			Background(lipgloss.Color(m.screenModel.DefaultLowerWindowBackground.ToHex())).
+			Foreground(lipgloss.Color(m.screenModel.DefaultLowerWindowForeground.ToHex()))
 
 		return m, waitForInterpreter(m.outputChannel)
 
