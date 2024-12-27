@@ -134,6 +134,18 @@
       ]
     },
     {
+      "name": "Launch beyond.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "stories/beyond.z5"
+      ]
+    },
+    {
       "name": "Unicode test",
       "type": "go",
       "request": "launch",

@@ -113,7 +113,11 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.appState == appWaitingForCharacter {
 			m.appState = appRunning
-			m.sendChannel <- string(msg.Runes[0])
+			if len(msg.Runes) > 0 {
+				m.sendChannel <- string(msg.Runes[0])
+			} else {
+				m.sendChannel <- string("\n") // TODO - Maybe ok? Does it really matter if escape was pressed?
+			}
 		} else {
 			switch msg.Type {
 			case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
@@ -197,7 +201,8 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Foreground(lipgloss.Color(m.screenModel.LowerWindowForeground.ToHex())).
 			Bold(m.screenModel.LowerWindowTextStyle&zmachine.Bold == zmachine.Bold).
 			Italic(m.screenModel.LowerWindowTextStyle&zmachine.Italic == zmachine.Italic).
-			Reverse(m.screenModel.LowerWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo)
+			Reverse(m.screenModel.LowerWindowTextStyle&zmachine.ReverseVideo == zmachine.ReverseVideo).
+			Inline(true)
 		m.upperWindowStyleCurrent = m.upperWindowStyleCurrent.
 			Background(lipgloss.Color(m.screenModel.UpperWindowBackground.ToHex())).
 			Foreground(lipgloss.Color(m.screenModel.UpperWindowForeground.ToHex())).
@@ -211,10 +216,7 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Only flush the lower window text to the prestyled buffer when there's a change to the screen
 		// model to avoid performance hit by too many ascii codes
-		if m.lowerWindowText != "" {
-			m.lowerWindowTextPreStyled += m.lowerWindowStyle.Render(m.lowerWindowText)
-			m.lowerWindowText = ""
-		}
+		prerenderLowerWindowText(&m)
 
 		return m, waitForInterpreter(m.outputChannel)
 
@@ -247,6 +249,17 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+func prerenderLowerWindowText(m *runStoryModel) {
+	if m.lowerWindowText != "" {
+		lines := strings.Split(m.lowerWindowText, "\n")
+		for ix, line := range lines {
+			lines[ix] = m.lowerWindowStyle.Render(line)
+		}
+		m.lowerWindowTextPreStyled += strings.Join(lines, "\n")
+		m.lowerWindowText = ""
+	}
 }
 
 func createStatusLine(width int, placeName string, scoreOrHours int, movesOrMinutes int, isTimeBasedGame bool) string {
@@ -315,7 +328,8 @@ func (m runStoryModel) View() string {
 
 	// Text must be pre-rendered in relevant style in the outputText as styles
 	// can change during screen usage
-	fullLowerWindowText := m.lowerWindowTextPreStyled + m.lowerWindowStyle.Render(m.lowerWindowText)
+	prerenderLowerWindowText(&m)
+	fullLowerWindowText := m.lowerWindowTextPreStyled
 
 	wordWrappedBody := wordwrap.String(fullLowerWindowText, m.width)
 
@@ -402,7 +416,7 @@ func main() {
 		model = selectstoryui.NewUIModel(newApplicationModel)
 	}
 
-	tui := tea.NewProgram(model, tea.WithAltScreen())
+	tui := tea.NewProgram(model) //, tea.WithAltScreen())
 
 	if _, err := tui.Run(); err != nil {
 		fmt.Println("Error running program:", err)
