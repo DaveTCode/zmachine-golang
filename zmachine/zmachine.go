@@ -895,11 +895,39 @@ func (z *ZMachine) StepMachine() bool {
 			case 0x0d: // SET_TRUE_COLOUR
 				foreground := opcode.operands[0].Value(z)
 				background := opcode.operands[1].Value(z)
+				var fgColor, bgColor Color
 
-				// TODO - Handle current/default options here although no story files found using it!
+				if int16(foreground) == -1 {
+					if z.screenModel.LowerWindowActive {
+						fgColor = z.screenModel.DefaultLowerWindowForeground
+					} else {
+						fgColor = z.screenModel.DefaultUpperWindowForeground
+					}
+				} else if int16(foreground) == -2 {
+					if z.screenModel.LowerWindowActive {
+						fgColor = z.screenModel.LowerWindowForeground
+					} else {
+						fgColor = z.screenModel.UpperWindowForeground
+					}
+				} else {
+					fgColor = Color{int(foreground&0b11111) * 32, int((foreground>>5)&0b11111) * 32, int((foreground>>10)&0b11111) * 32}
+				}
 
-				fgColor := Color{int(foreground&0b11111) * 32, int((foreground>>5)&0b11111) * 32, int((foreground>>10)&0b11111) * 32}
-				bgColor := Color{int(background&0b11111) * 32, int((background>>5)&0b11111) * 32, int((background>>10)&0b11111) * 32}
+				if int16(background) == -1 {
+					if z.screenModel.LowerWindowActive {
+						bgColor = z.screenModel.DefaultLowerWindowBackground
+					} else {
+						bgColor = z.screenModel.DefaultUpperWindowBackground
+					}
+				} else if int16(foreground) == -2 {
+					if z.screenModel.LowerWindowActive {
+						bgColor = z.screenModel.LowerWindowBackground
+					} else {
+						bgColor = z.screenModel.UpperWindowBackground
+					}
+				} else {
+					bgColor = Color{int(background&0b11111) * 32, int((background>>5)&0b11111) * 32, int((background>>10)&0b11111) * 32}
+				}
 
 				if z.screenModel.LowerWindowActive {
 					z.screenModel.LowerWindowForeground = fgColor
@@ -908,6 +936,8 @@ func (z *ZMachine) StepMachine() bool {
 					z.screenModel.UpperWindowForeground = fgColor
 					z.screenModel.UpperWindowBackground = bgColor
 				}
+
+				z.outputChannel <- z.screenModel
 
 			default:
 				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
