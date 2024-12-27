@@ -1,5 +1,7 @@
 package zmachine
 
+import "fmt"
+
 type TextStyle int
 
 const (
@@ -10,83 +12,101 @@ const (
 	FixedPitch   TextStyle = 0b0001_0000
 )
 
-type Color int
-
-const (
-	Current     Color = 0
-	Default     Color = 1
-	Black       Color = 2
-	Red         Color = 3
-	Green       Color = 4
-	Yellow      Color = 5
-	Blue        Color = 6
-	Magenta     Color = 7
-	Cyan        Color = 8
-	White       Color = 9
-	LightGrey   Color = 10
-	MediumGrey  Color = 11
-	DarkGrey    Color = 12
-	Reserved1   Color = 13
-	Reserved2   Color = 14
-	Transparent Color = 15
-)
+type Color struct {
+	r int
+	g int
+	b int
+}
 
 func (c Color) ToHex() string {
-	switch c {
-	case Black:
-		return "#000000"
-	case Red:
-		return "#ff0000"
-	case Green:
-		return "#00ff00"
-	case Yellow:
-		return "#ffff00"
-	case Blue:
-		return "#0000ff"
-	case Magenta:
-		return "#ff00ff"
-	case Cyan:
-		return "#00ffff"
-	case White:
-		return "#ffffff"
-	case LightGrey:
-		return "#cccccc"
-	case MediumGrey:
-		return "#828282"
-	case DarkGrey:
-		return "#474747"
-	default:
-		panic("TODO - Handle other colours")
-	}
+	return fmt.Sprintf("#%02x%02x%02x", c.r, c.g, c.b)
 }
 
 // ScreenModel - This is very deliberately a _not_ V6 screen model
 type ScreenModel struct {
 	LowerWindowActive bool
 
-	UpperWindowHeight     int
-	UpperWindowForeground Color
-	UpperWindowBackground Color
-	UpperWindowCursorX    int
-	UpperWindowCursorY    int
-	UpperWindowTextStyle  TextStyle
+	UpperWindowHeight            int
+	UpperWindowForeground        Color
+	UpperWindowBackground        Color
+	DefaultUpperWindowForeground Color
+	DefaultUpperWindowBackground Color
+	UpperWindowCursorX           int
+	UpperWindowCursorY           int
+	UpperWindowTextStyle         TextStyle
 
-	LowerWindowForeground Color
-	LowerWindowBackground Color
-	LowerWindowTextStyle  TextStyle
+	DefaultLowerWindowForeground Color
+	DefaultLowerWindowBackground Color
+	LowerWindowForeground        Color
+	LowerWindowBackground        Color
+	LowerWindowTextStyle         TextStyle
+}
+
+func (m *ScreenModel) NewZMachineColor(i uint16, isForeground bool) Color {
+	switch i {
+	case 0: // CURRENT
+		if isForeground {
+			return m.LowerWindowForeground
+		} else {
+			return m.LowerWindowBackground
+		}
+	case 1: // DEFAULT - TODO - Maybe make these defaults set in the screen model on creation?
+		if isForeground {
+			if m.LowerWindowActive {
+				return m.DefaultLowerWindowForeground
+			} else {
+				return m.DefaultUpperWindowForeground
+			}
+		} else {
+			if m.LowerWindowActive {
+				return m.DefaultLowerWindowBackground
+			} else {
+				return m.DefaultUpperWindowBackground
+			}
+		}
+	case 2: // BLACK
+		return Color{0, 0, 0}
+	case 3: // RED
+		return Color{255, 0, 0}
+	case 4: // GREEN
+		return Color{0, 255, 0}
+	case 5: // YELLOW
+		return Color{255, 255, 0}
+	case 6: // BLUE
+		return Color{0, 0, 255}
+	case 7: // MAGENTA
+		return Color{255, 0, 255}
+	case 8: // CYAN
+		return Color{0, 255, 255}
+	case 9: // WHITE
+		return Color{255, 255, 255}
+	case 10: // LIGHT GREY
+		return Color{192, 192, 192}
+	case 11: // MEDIUM GREY
+		return Color{128, 128, 128}
+	case 12: // DARK GREY
+		return Color{64, 64, 64}
+	default:
+		//panic("TODO - Handle other colours")
+		return Color{0, 0, 0}
+	}
 }
 
 func newScreenModel(foregroundColor Color, backgroundColor Color) ScreenModel {
 	return ScreenModel{
-		LowerWindowActive:     true,
-		UpperWindowHeight:     0,
-		UpperWindowForeground: foregroundColor,
-		UpperWindowBackground: backgroundColor,
-		UpperWindowCursorX:    1,
-		UpperWindowCursorY:    1,
-		UpperWindowTextStyle:  Roman,
-		LowerWindowForeground: backgroundColor,
-		LowerWindowBackground: foregroundColor,
-		LowerWindowTextStyle:  Roman,
+		LowerWindowActive:            true,
+		UpperWindowHeight:            0,
+		DefaultUpperWindowForeground: foregroundColor,
+		DefaultUpperWindowBackground: backgroundColor,
+		UpperWindowForeground:        foregroundColor,
+		UpperWindowBackground:        backgroundColor,
+		UpperWindowCursorX:           1,
+		UpperWindowCursorY:           1,
+		UpperWindowTextStyle:         Roman,
+		DefaultLowerWindowForeground: backgroundColor,
+		DefaultLowerWindowBackground: foregroundColor,
+		LowerWindowForeground:        backgroundColor,
+		LowerWindowBackground:        foregroundColor,
+		LowerWindowTextStyle:         Roman,
 	}
 }

@@ -156,6 +156,18 @@
         "--rom",
         "unicode.z5"
       ]
+    },
+    {
+      "name": "gn test",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "gntests.z5"
+      ]
     }
   ]
 }
