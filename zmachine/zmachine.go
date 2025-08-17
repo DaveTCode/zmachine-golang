@@ -247,11 +247,12 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 	}
 
 	if result != branchReversed {
-		if offset == 0 {
+		switch offset {
+		case 0:
 			z.retValue(0)
-		} else if offset == 1 {
+		case 1:
 			z.retValue(1)
-		} else {
+		default:
 			destination := uint32(int32(frame.pc) + offset - 2)
 			frame.pc = destination
 		}
