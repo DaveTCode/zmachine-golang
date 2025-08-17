@@ -36,7 +36,7 @@ const (
 )
 
 type runStoryModel struct {
-	outputChannel            <-chan interface{}
+	outputChannel            <-chan any
 	sendChannel              chan<- string
 	zMachine                 *zmachine.ZMachine
 	statusBar                zmachine.StatusBar
@@ -351,7 +351,7 @@ func (m runStoryModel) View() string {
 		Render(s.String())
 }
 
-func waitForInterpreter(sub <-chan interface{}) tea.Cmd {
+func waitForInterpreter(sub <-chan any) tea.Cmd {
 	return func() tea.Msg {
 		msg := <-sub
 		switch msg := msg.(type) {
@@ -378,7 +378,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan interface{}) tea.Model {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan any) tea.Model {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -407,7 +407,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		zMachineOutputChannel := make(chan interface{})
+		zMachineOutputChannel := make(chan any)
 		zMachineInputChannel := make(chan string)
 		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
 

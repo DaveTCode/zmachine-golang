@@ -63,7 +63,7 @@ type ZMachine struct {
 	streams       Streams
 	rng           rand.Rand
 	Alphabets     *zstring.Alphabets
-	outputChannel chan<- interface{}
+	outputChannel chan<- any
 	inputChannel  <-chan string
 	UndoStates    InMemorySaveStateCache
 }
@@ -150,7 +150,7 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 	}
 }
 
-func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<- interface{}) *ZMachine {
+func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<- any) *ZMachine {
 	machine := ZMachine{
 		Core:          zcore.LoadCore(storyFile),
 		inputChannel:  inputChannel,
@@ -528,7 +528,7 @@ var pcHistory = make([]Opcode, 100)
 var pcHistoryPtr = 0
 
 func (z *ZMachine) StepMachine() bool {
-	if z.callStack.peek().pc == 0x4aca {
+	if z.callStack.peek().pc == 0xcc20 {
 		pcHistoryPtr = pcHistoryPtr + 1 - 1
 	}
 
