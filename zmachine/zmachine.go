@@ -376,6 +376,12 @@ func (z *ZMachine) RemoveObject(objId uint16) {
 }
 
 func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
+	// If newParent is 0, just remove the object from the tree
+	if newParent == 0 {
+		z.RemoveObject(objId)
+		return
+	}
+
 	object := zobject.GetObject(objId, &z.Core, z.Alphabets)
 	destinationObject := zobject.GetObject(newParent, &z.Core, z.Alphabets)
 
