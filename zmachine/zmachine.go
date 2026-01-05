@@ -24,6 +24,8 @@ type StatusBar struct {
 
 type Quit bool
 
+type Restart bool
+
 type EraseWindowRequest int
 
 type StateChangeRequest int
@@ -560,6 +562,10 @@ func (z *ZMachine) StepMachine() bool {
 			z.appendText(text)
 			z.appendText("\n")
 			z.retValue(1)
+
+		case 7: // RESTART
+			z.outputChannel <- Restart(true)
+			return false
 
 		case 8: // RET_POPPED
 			v := frame.pop()

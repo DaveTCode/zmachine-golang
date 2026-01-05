@@ -46,7 +46,7 @@ type selectStoryModel struct {
 	storyList              list.Model
 	spinner                spinner.Model
 	err                    error
-	createApplicationModel func(*zmachine.ZMachine, chan<- string, <-chan any) tea.Model
+	createApplicationModel func(*zmachine.ZMachine, chan<- string, <-chan any, []byte) tea.Model
 }
 
 type storiesDownloadedMsg []list.Item
@@ -56,7 +56,7 @@ type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
-func NewUIModel(createAppModel func(*zmachine.ZMachine, chan<- string, <-chan any) tea.Model) tea.Model {
+func NewUIModel(createAppModel func(*zmachine.ZMachine, chan<- string, <-chan any, []byte) tea.Model) tea.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -103,7 +103,7 @@ func (m selectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		zMachineInputChannel := make(chan string)
 		zMachine := zmachine.LoadRom([]uint8(msg), zMachineInputChannel, zMachineOutputChannel)
 
-		newModel := m.createApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
+		newModel := m.createApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel, []byte(msg))
 		return newModel, newModel.Init()
 
 	case errMsg:

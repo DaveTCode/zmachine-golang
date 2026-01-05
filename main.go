@@ -26,6 +26,7 @@ type stateUpdateMessage zmachine.StateChangeRequest
 type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
+type restartRequest bool
 
 type runningStoryState int
 
@@ -39,6 +40,7 @@ type runStoryModel struct {
 	outputChannel            <-chan any
 	sendChannel              chan<- string
 	zMachine                 *zmachine.ZMachine
+	romBytes                 []byte
 	statusBar                zmachine.StatusBar
 	screenModel              zmachine.ScreenModel
 	lowerWindowTextPreStyled string
@@ -220,6 +222,27 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, waitForInterpreter(m.outputChannel)
 
+	case restartRequest:
+		// Reload the ROM from stored bytes
+		zMachineOutputChannel := make(chan any)
+		zMachineInputChannel := make(chan string)
+		m.zMachine = zmachine.LoadRom(m.romBytes, zMachineInputChannel, zMachineOutputChannel)
+		m.outputChannel = zMachineOutputChannel
+		m.sendChannel = zMachineInputChannel
+
+		// Clear screen state
+		m.lowerWindowText = ""
+		m.lowerWindowTextPreStyled = ""
+		for row := range len(m.upperWindowText) {
+			m.upperWindowText[row] = strings.Repeat(" ", m.width)
+			m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
+		}
+		m.appState = appRunning
+		return m, tea.Batch(
+			waitForInterpreter(m.outputChannel),
+			runInterpreter(m.zMachine),
+		)
+
 	case eraseWindowRequest:
 		switch int(msg) {
 		case -2: // Keep split windows and clear both
@@ -367,6 +390,8 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 			return textUpdateMessage(msg)
 		case zmachine.Quit:
 			return tea.Quit()
+		case zmachine.Restart:
+			return restartRequest(true)
 		default:
 			panic("Invalid message type sent from interpreter")
 		}
@@ -378,7 +403,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan any) tea.Model {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan any, romBytes []byte) tea.Model {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -390,6 +415,7 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 		outputChannel:           outputChannel,
 		sendChannel:             inputChannel,
 		zMachine:                zMachine,
+		romBytes:                romBytes,
 		appState:                appRunning,
 		inputBox:                ti,
 		upperWindowStyleCurrent: lipgloss.NewStyle(),
@@ -411,7 +437,7 @@ func main() {
 		zMachineInputChannel := make(chan string)
 		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
 
-		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel)
+		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel, romFileBytes)
 	} else {
 		model = selectstoryui.NewUIModel(newApplicationModel)
 	}
