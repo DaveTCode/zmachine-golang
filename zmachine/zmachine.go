@@ -413,8 +413,14 @@ func (z *ZMachine) appendText(s string) {
 		// reflect the change in cursor position
 		if !z.screenModel.LowerWindowActive {
 			lines := strings.Split(s, "\n")
-			z.screenModel.UpperWindowCursorY += len(lines)
-			z.screenModel.UpperWindowCursorX += len(lines[len(lines)-1])
+			if len(lines) > 1 {
+				// Text contains newlines - Y advances by number of newlines, X resets to length of last segment
+				z.screenModel.UpperWindowCursorY += len(lines) - 1
+				z.screenModel.UpperWindowCursorX = len(lines[len(lines)-1])
+			} else {
+				// No newlines - just advance X
+				z.screenModel.UpperWindowCursorX += len(s)
+			}
 			z.outputChannel <- z.screenModel
 		}
 	}
@@ -1036,6 +1042,11 @@ func (z *ZMachine) StepMachine() bool {
 				}
 				window := opcode.operands[0].Value(z)
 				z.screenModel.LowerWindowActive = window == 0
+				// 8.7.2: Whenever the upper window is selected, its cursor position is reset to the top left
+				if window == 1 {
+					z.screenModel.UpperWindowCursorX = 0
+					z.screenModel.UpperWindowCursorY = 0
+				}
 				z.outputChannel <- z.screenModel
 
 			case 12: // CALL_VS2
@@ -1044,12 +1055,30 @@ func (z *ZMachine) StepMachine() bool {
 			case 13: // ERASE_WINDOW
 				window := int16(opcode.operands[0].Value(z))
 
-				if window == 1 {
-					z.screenModel.LowerWindowActive = true
+				switch window {
+				case -1:
+					// 8.7.3.3: Clear whole screen, collapse upper window to height 0, select lower window
 					z.screenModel.UpperWindowHeight = 0
-					z.outputChannel <- z.screenModel
+					z.screenModel.LowerWindowActive = true
+					// Move cursor to top left (V5+) or bottom left (V4)
+					// For now assuming V5+ behavior
+					z.screenModel.UpperWindowCursorX = 0
+					z.screenModel.UpperWindowCursorY = 0
+				case -2:
+					// Keep split but clear both windows
+					// 8.7.3.2.1: Cursor moves to top left (V5+)
+					z.screenModel.UpperWindowCursorX = 0
+					z.screenModel.UpperWindowCursorY = 0
+				case 0:
+					// Clear lower window - cursor handled by UI
+				case 1:
+					// Clear upper window
+					// 8.7.3.2.1: Cursor moves to top left
+					z.screenModel.UpperWindowCursorX = 0
+					z.screenModel.UpperWindowCursorY = 0
 				}
 
+				z.outputChannel <- z.screenModel
 				z.outputChannel <- EraseWindowRequest(window)
 
 			case 15: // SET_CURSOR
@@ -1061,9 +1090,10 @@ func (z *ZMachine) StepMachine() bool {
 				}
 
 				// TODO - Pretty sure you can't set the cursor on lower window v<=5
+				// Z-machine uses 1-based coordinates, convert to 0-based
 				if !z.screenModel.LowerWindowActive {
-					z.screenModel.UpperWindowCursorX = int(col)
-					z.screenModel.UpperWindowCursorY = int(line)
+					z.screenModel.UpperWindowCursorX = int(col) - 1
+					z.screenModel.UpperWindowCursorY = int(line) - 1
 					z.outputChannel <- z.screenModel
 				}
 

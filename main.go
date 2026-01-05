@@ -135,30 +135,32 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// In anything other than v6 the bottom window is append only (I think - TODO)
 			m.lowerWindowText += string(msg)
 		} else {
-			if m.screenModel.UpperWindowCursorY > 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
-				row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
-				text := string(msg)
-				if text != " " {
-					text += ""
-				}
+			// Upper window - handle text character by character, splitting on newlines
+			text := string(msg)
+			for _, segment := range strings.Split(text, "\n") {
+				if m.screenModel.UpperWindowCursorY >= 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
+					row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
 
-				// Need to track what style each rune is written in so we can track cursor position based on runes but still
-				// render using the original style they were written with. Rendering first will fill the text with ansi chars
-				// for specifying the colors/styles
-				for i := m.screenModel.UpperWindowCursorX; i < int(math.Min(float64(len(row)), float64(len(text)))); i++ {
-					m.upperWindowStyle[m.screenModel.UpperWindowCursorY][i] = m.upperWindowStyleCurrent
-				}
+					// Update styles for each character being written
+					for i := 0; i < len(segment) && m.screenModel.UpperWindowCursorX+i < len(m.upperWindowStyle[m.screenModel.UpperWindowCursorY]); i++ {
+						m.upperWindowStyle[m.screenModel.UpperWindowCursorY][m.screenModel.UpperWindowCursorX+i] = m.upperWindowStyleCurrent
+					}
 
-				if m.screenModel.UpperWindowCursorX < len(row) {
-					before := row[:m.screenModel.UpperWindowCursorX]
-					after := row[m.screenModel.UpperWindowCursorX:]
-					fullText := before + text + after
-					m.upperWindowText[m.screenModel.UpperWindowCursorY] = fullText[:m.width] // Truncate the text to the width of the screen
-				} else {
-					// TODO Nothing happens here maybe? Trying to print on a column outside the screen
+					if m.screenModel.UpperWindowCursorX < len(row) {
+						before := row[:m.screenModel.UpperWindowCursorX]
+						// Replace characters at cursor position (not insert)
+						afterStart := m.screenModel.UpperWindowCursorX + len(segment)
+						after := ""
+						if afterStart < len(row) {
+							after = row[afterStart:]
+						}
+						fullText := before + segment + after
+						if len(fullText) > m.width {
+							fullText = fullText[:m.width]
+						}
+						m.upperWindowText[m.screenModel.UpperWindowCursorY] = fullText
+					}
 				}
-			} else {
-				// TODO - Nothing happens here, trying to print on a row that can't be shown
 			}
 		}
 
@@ -247,15 +249,22 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch int(msg) {
 		case -2: // Keep split windows and clear both
 			m.lowerWindowText = ""
+			m.lowerWindowTextPreStyled = ""
 			for row := range m.screenModel.UpperWindowHeight {
 				m.upperWindowText[row] = strings.Repeat(" ", m.width)
 				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
 			}
-		case -1: // Unsplit the window and clear
+		case -1: // Unsplit the window and clear both
 			m.lowerWindowText = ""
-		case 0:
+			m.lowerWindowTextPreStyled = ""
+			for row := range len(m.upperWindowText) {
+				m.upperWindowText[row] = strings.Repeat(" ", m.width)
+				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
+			}
+		case 0: // Clear lower window
 			m.lowerWindowText = ""
-		case 1:
+			m.lowerWindowTextPreStyled = ""
+		case 1: // Clear upper window
 			for row := range m.screenModel.UpperWindowHeight {
 				m.upperWindowText[row] = strings.Repeat(" ", m.width)
 				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
