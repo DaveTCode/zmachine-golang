@@ -146,6 +146,18 @@
       ]
     },
     {
+      "name": "Launch avon.z5",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "main.go",
+      "console": "integratedTerminal",
+      "args": [
+        "--rom",
+        "avon.z5"
+      ]
+    },
+    {
       "name": "Unicode test",
       "type": "go",
       "request": "launch",
