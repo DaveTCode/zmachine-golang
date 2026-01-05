@@ -1067,6 +1067,17 @@ func (z *ZMachine) StepMachine() bool {
 					z.outputChannel <- z.screenModel
 				}
 
+			case 16: // GET_CURSOR
+				if z.Core.Version == 6 {
+					panic("Cursors are more complex on v6")
+				}
+
+				array := uint32(opcode.operands[0].Value(z))
+				// Store cursor position as 1-based coordinates (Z-machine convention)
+				// Word 0 = row, Word 1 = column
+				z.Core.WriteHalfWord(array, uint16(z.screenModel.UpperWindowCursorY+1))
+				z.Core.WriteHalfWord(array+2, uint16(z.screenModel.UpperWindowCursorX+1))
+
 			case 17: // SET_TEXT_STYLE
 				if z.Core.Version >= 4 {
 					mask := uint8(opcode.operands[0].Value(z))
