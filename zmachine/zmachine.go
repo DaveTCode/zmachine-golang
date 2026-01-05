@@ -56,16 +56,17 @@ type Streams struct {
 }
 
 type ZMachine struct {
-	callStack     CallStack
-	Core          zcore.Core
-	dictionary    *dictionary.Dictionary
-	screenModel   ScreenModel
-	streams       Streams
-	rng           rand.Rand
-	Alphabets     *zstring.Alphabets
-	outputChannel chan<- any
-	inputChannel  <-chan string
-	UndoStates    InMemorySaveStateCache
+	callStack        CallStack
+	Core             zcore.Core
+	dictionary       *dictionary.Dictionary
+	screenModel      ScreenModel
+	streams          Streams
+	rng              rand.Rand
+	Alphabets        *zstring.Alphabets
+	outputChannel    chan<- any
+	inputChannel     <-chan string
+	UndoStates       InMemorySaveStateCache
+	nextFramePointer uint16 // Used for catch/throw in V5+
 }
 
 func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 {
@@ -564,6 +565,16 @@ func (z *ZMachine) StepMachine() bool {
 			v := frame.pop()
 			z.retValue(v)
 
+		case 9: // POP (v1-4) / CATCH (v5+)
+			if z.Core.Version <= 4 {
+				frame.pop()
+			} else {
+				// Tag the current frame with a unique frame pointer and store it
+				z.nextFramePointer++
+				frame.framePointer = uint32(z.nextFramePointer)
+				z.writeVariable(z.readIncPC(frame), z.nextFramePointer, false)
+			}
+
 		case 10: // QUIT
 			return false
 
@@ -828,7 +839,16 @@ func (z *ZMachine) StepMachine() bool {
 			if z.Core.Version < 5 {
 				panic("Invalid throw routine on v1-4")
 			}
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+			returnValue := opcode.operands[0].Value(z)
+			fp := uint32(opcode.operands[1].Value(z))
+
+			// Pop frames until we find the one with the matching frame pointer
+			for z.callStack.peek().framePointer != fp {
+				z.callStack.pop()
+			}
+
+			// Return with the given value from the found frame
+			z.retValue(returnValue)
 
 		case 0, 29, 30, 31: // blank
 			panic(fmt.Sprintf("Unused 2OP opcode number: %x", opcode.opcodeNumber))
