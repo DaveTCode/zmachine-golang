@@ -135,21 +135,27 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// In anything other than v6 the bottom window is append only (I think - TODO)
 			m.lowerWindowText += string(msg)
 		} else {
-			// Upper window - handle text character by character, splitting on newlines
+			// Upper window - handle text, splitting on newlines
 			text := string(msg)
-			for _, segment := range strings.Split(text, "\n") {
-				if m.screenModel.UpperWindowCursorY >= 0 && m.screenModel.UpperWindowCursorY < len(m.upperWindowText) {
-					row := m.upperWindowText[m.screenModel.UpperWindowCursorY]
+			segments := strings.Split(text, "\n")
+			cursorX := m.screenModel.UpperWindowCursorX
+			cursorY := m.screenModel.UpperWindowCursorY
+
+			for segIdx, segment := range segments {
+				if cursorY >= 0 && cursorY < len(m.upperWindowText) {
+					row := m.upperWindowText[cursorY]
 
 					// Update styles for each character being written
-					for i := 0; i < len(segment) && m.screenModel.UpperWindowCursorX+i < len(m.upperWindowStyle[m.screenModel.UpperWindowCursorY]); i++ {
-						m.upperWindowStyle[m.screenModel.UpperWindowCursorY][m.screenModel.UpperWindowCursorX+i] = m.upperWindowStyleCurrent
+					if cursorY < len(m.upperWindowStyle) {
+						for i := 0; i < len(segment) && cursorX+i < len(m.upperWindowStyle[cursorY]); i++ {
+							m.upperWindowStyle[cursorY][cursorX+i] = m.upperWindowStyleCurrent
+						}
 					}
 
-					if m.screenModel.UpperWindowCursorX < len(row) {
-						before := row[:m.screenModel.UpperWindowCursorX]
+					if cursorX < len(row) {
+						before := row[:cursorX]
 						// Replace characters at cursor position (not insert)
-						afterStart := m.screenModel.UpperWindowCursorX + len(segment)
+						afterStart := cursorX + len(segment)
 						after := ""
 						if afterStart < len(row) {
 							after = row[afterStart:]
@@ -158,8 +164,14 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						if len(fullText) > m.width {
 							fullText = fullText[:m.width]
 						}
-						m.upperWindowText[m.screenModel.UpperWindowCursorY] = fullText
+						m.upperWindowText[cursorY] = fullText
 					}
+				}
+
+				// After each segment (except the last), move to next line
+				if segIdx < len(segments)-1 {
+					cursorY++
+					cursorX = 0
 				}
 			}
 		}
