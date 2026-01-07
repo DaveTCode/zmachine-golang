@@ -40,7 +40,17 @@ type Core struct {
 func LoadCore(bytes []uint8) Core {
 	bytes[0x1e] = 0x6 // Interpreter number - IBM PC chosen as closest match
 	bytes[0x1f] = 0x1 // Interpreter version - nobody cares
-	// TODO - Should really set screen height/width etc here but they can change so want to handle with channels and status updates from the ui properly
+
+	// Set screen dimensions - games may use these for layout calculations
+	// Using typical terminal dimensions (80x25 characters, 1x1 units per char)
+	bytes[0x20] = 25  // Screen height (lines)
+	bytes[0x21] = 80  // Screen width (characters)
+	bytes[0x22] = 0   // Screen width (units) - high byte
+	bytes[0x23] = 80  // Screen width (units) - low byte (same as chars for text-only)
+	bytes[0x24] = 0   // Screen height (units) - high byte
+	bytes[0x25] = 25  // Screen height (units) - low byte
+	bytes[0x26] = 1   // Font height (units)
+	bytes[0x27] = 1   // Font width (units)
 
 	// Claim that this interpreter supports v1.2 of the spec (aspirational!)
 	bytes[0x32] = 0x1
@@ -50,7 +60,9 @@ func LoadCore(bytes []uint8) Core {
 	if bytes[0] <= 3 {
 		bytes[1] |= 0b0010_0000 // Only flag to set is the "split screen available one"
 	} else {
-		bytes[1] |= 0b1010_1101 // No pictures or fixed width (we only have one font)
+		// Flags: colors (0x01), bold (0x04), italic (0x08), split screen (0x20)
+		// NOT claiming: pictures (0x02), fixed-width default (0x10), timed input (0x80)
+		bytes[1] |= 0b0010_1101
 	}
 
 	// Parse the extension table for any interesting information we want
