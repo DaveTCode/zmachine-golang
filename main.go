@@ -340,9 +340,7 @@ func (m runStoryModel) View() string {
 		errorStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF0000")).
 			Bold(true)
-		return fmt.Sprintf("\n%s\n\n%s\n",
-			errorStyle.Render("Z-Machine Error:"),
-			m.runtimeError)
+		return fmt.Sprintf("\n%s\n\n%s\n", errorStyle.Render("Z-Machine Error:"), m.runtimeError)
 	}
 
 	// Wait until the screen has loaded properly to print anything
