@@ -1135,7 +1135,7 @@ func (z *ZMachine) StepMachine() bool {
 				} else if n == 0 {
 					z.rng.Seed(time.Now().UnixNano())
 				} else {
-					result = uint16(z.rng.Int31n(int32(n)))
+					result = uint16(z.rng.Int31n(int32(n))) + 1
 				}
 
 				z.writeVariable(z.readIncPC(frame), result, false)
