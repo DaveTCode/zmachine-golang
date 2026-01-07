@@ -1143,7 +1143,7 @@ func (z *ZMachine) StepMachine() bool {
 				frame.push(opcode.operands[0].Value(z))
 
 			case 9: // PULL
-				if z.Core.Version >= 6 {
+				if z.Core.Version == 6 {
 					if len(opcode.operands) > 0 {
 						return z.reportError("V6 PULL with user stack not implemented")
 					}
