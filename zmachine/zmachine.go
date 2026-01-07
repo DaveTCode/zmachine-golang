@@ -652,9 +652,6 @@ func (z *ZMachine) StepMachine() bool {
 		case 11: // NEWLINE
 			z.appendText("\n")
 
-		case 12: // CHECK_UNICODE
-			z.writeVariable(z.readIncPC(frame), 3, false) // TODO - Obviously not really true, but does it matter?
-
 		case 13: // VERIFY
 			checksum := z.Core.FileChecksum
 			fileLength := z.Core.FileLength()
