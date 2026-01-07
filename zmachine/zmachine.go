@@ -1143,7 +1143,15 @@ func (z *ZMachine) StepMachine() bool {
 				frame.push(opcode.operands[0].Value(z))
 
 			case 9: // PULL
-				z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(), true)
+				if z.Core.Version >= 6 {
+					if len(opcode.operands) > 0 {
+						return z.reportError("V6 PULL with user stack not implemented")
+					}
+					value := frame.pop()
+					z.writeVariable(z.readIncPC(frame), value, false)
+				} else {
+					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(), true)
+				}
 
 			case 10: // SPLIT_WINDOW
 				if z.Core.Version < 3 {
