@@ -922,7 +922,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 0x0b: // PRINT_UNICODE
 				chr := opcode.operands[0].Value(z)
-				z.appendText(string(chr))
+				z.appendText(string(rune(chr)))
 
 			case 0x0c: // CHECK_UNICODE
 				chr := opcode.operands[0].Value(z)

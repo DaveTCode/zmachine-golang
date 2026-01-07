@@ -28,16 +28,15 @@ var zstringEncodingTests = []struct {
 }
 
 func TestZStringDecoding(t *testing.T) {
-	storyFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic("test story file missing")
-	}
-
-	core := zcore.LoadCore(storyFileBytes)
+	minimalBytes := make([]uint8, 256)
+	core := zcore.LoadCore(minimalBytes)
 
 	for _, tt := range zstringDecodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
 			core.Version = tt.version
+			for i, b := range tt.in {
+				core.WriteByte(uint32(i), b)
+			}
 			zstr, bytesRead := Decode(0, uint32(len(tt.in)), &core, &defaultAlphabetsV1, false)
 
 			if tt.out != zstr {
@@ -51,12 +50,8 @@ func TestZStringDecoding(t *testing.T) {
 }
 
 func TestZStringEncoding(t *testing.T) {
-	storyFileBytes, err := os.ReadFile("../zork1.z1")
-	if err != nil {
-		panic("test story file missing")
-	}
-
-	core := zcore.LoadCore(storyFileBytes)
+	minimalBytes := make([]uint8, 256)
+	core := zcore.LoadCore(minimalBytes)
 
 	for _, tt := range zstringEncodingTests {
 		t.Run(string(tt.out), func(t *testing.T) {
