@@ -1,0 +1,950 @@
+=== RUN   TestAllGames
+    allgames_test.go:57: Found 466 games to test
+=== RUN   TestAllGames/7doctors.z5
+=== RUN   TestAllGames/905.z5
+=== RUN   TestAllGames/A1RL0CK.z5
+=== RUN   TestAllGames/AOTYRZ.z5
+=== RUN   TestAllGames/Acheton.z8
+=== RUN   TestAllGames/Advent.z5
+=== RUN   TestAllGames/Advent_Crowther.z8
+=== RUN   TestAllGames/Adventureland.z5
+=== RUN   TestAllGames/AlongTheRiver.z5
+=== RUN   TestAllGames/Alpha.z5
+=== RUN   TestAllGames/Ambassadors_Daughter.z8
+=== RUN   TestAllGames/AndAHippoNewYear.z8
+=== RUN   TestAllGames/Andromeda_Genesis.z8
+=== RUN   TestAllGames/Asylum.z5
+=== RUN   TestAllGames/AtWork.z5
+=== RUN   TestAllGames/Aug4.z8
+=== RUN   TestAllGames/Avon.z5
+=== RUN   TestAllGames/B7_Snare.z8
+=== RUN   TestAllGames/Balances.z5
+=== RUN   TestAllGames/BibleRetold.z5
+=== RUN   TestAllGames/Biscuit.z5
+=== RUN   TestAllGames/BlackNWhiteRag.z5
+=== RUN   TestAllGames/BrandX.z5
+=== RUN   TestAllGames/Cacophony.z8
+=== RUN   TestAllGames/Calendar.z5
+=== RUN   TestAllGames/CalmMuteMoving.z5
+=== RUN   TestAllGames/Casting.z5
+=== RUN   TestAllGames/Chaos.z5
+=== RUN   TestAllGames/Code_Name_Silver_Steel.z8
+=== RUN   TestAllGames/Comp96.z5
+=== RUN   TestAllGames/ConanKillEverything.z5
+=== RUN   TestAllGames/Cove.z5
+=== RUN   TestAllGames/CriticalBreach.z8
+=== RUN   TestAllGames/Crobe.z5
+=== RUN   TestAllGames/CtDoom.z5
+=== RUN   TestAllGames/Cyclops.z5
+=== RUN   TestAllGames/DDIV.z5
+=== RUN   TestAllGames/Debate.z5
+=== RUN   TestAllGames/Delusns.z5
+=== RUN   TestAllGames/DontPeeYourself.z8
+=== RUN   TestAllGames/Dont_Push_The_Mailbox.z8
+=== RUN   TestAllGames/DragonTroll.z5
+=== RUN   TestAllGames/DuckMe.z3
+=== RUN   TestAllGames/Egyptian_Walking_Simulator.z8
+=== RUN   TestAllGames/Elephants.z5
+=== RUN   TestAllGames/Enemies.z8
+=== RUN   TestAllGames/FFF.z5
+=== RUN   TestAllGames/FailSafe.z5
+=== RUN   TestAllGames/Fairyland.z8
+=== RUN   TestAllGames/FineTune.z8
+=== RUN   TestAllGames/Fork.z5
+=== RUN   TestAllGames/Frobozzi.z5
+=== RUN   TestAllGames/Fyleet.z5
+=== RUN   TestAllGames/GA.z5
+=== RUN   TestAllGames/GerbilRiot.z5
+=== RUN   TestAllGames/GreatXavio.z5
+=== RUN   TestAllGames/Grue.z8
+=== RUN   TestAllGames/Gumshoe.z5
+=== RUN   TestAllGames/HLAinform.z5
+=== RUN   TestAllGames/HallowEve.z8
+=== RUN   TestAllGames/Hamil.z5
+=== RUN   TestAllGames/Hat.z5
+=== RUN   TestAllGames/Help.z8
+=== RUN   TestAllGames/Heroine.z8
+=== RUN   TestAllGames/Hide_a_pachyderm%21.z5
+=== RUN   TestAllGames/Home.z5
+=== RUN   TestAllGames/HouseOfDreamOfMoon.z8
+=== RUN   TestAllGames/HugeCave.z8
+=== RUN   TestAllGames/HugeHint.z5
+=== RUN   TestAllGames/I-0.z5
+=== RUN   TestAllGames/IF_Whispers_5.z8
+=== RUN   TestAllGames/Ibo.z5
+=== RUN   TestAllGames/ImpossibleStairs.z8
+=== RUN   TestAllGames/Inevita.z5
+=== RUN   TestAllGames/Informat.z5
+=== RUN   TestAllGames/Jigsaw.z8
+=== RUN   TestAllGames/Jigsaw_Footnotes.z5
+=== RUN   TestAllGames/Jigsaw_Game.z5
+=== RUN   TestAllGames/Kentish_Plover.z8
+=== RUN   TestAllGames/LDoDoom.z5
+=== RUN   TestAllGames/LLR3.z8
+=== RUN   TestAllGames/Leopold.z5
+=== RUN   TestAllGames/LostPig.z8
+=== RUN   TestAllGames/LostSheep.z5
+=== RUN   TestAllGames/Mahadev.z5
+=== RUN   TestAllGames/MakeItGood.z8
+=== RUN   TestAllGames/Mask.z5
+=== RUN   TestAllGames/Mercury_Trucking.z5
+=== RUN   TestAllGames/Mercy.z5
+=== RUN   TestAllGames/Misdirection.z5
+=== RUN   TestAllGames/More.z8
+=== RUN   TestAllGames/Mulldoon.z8
+=== RUN   TestAllGames/Mullmurd.z5
+=== RUN   TestAllGames/Murdac.z5
+=== RUN   TestAllGames/My_Angel.z5
+=== RUN   TestAllGames/Nidus.z5
+=== RUN   TestAllGames/Nihilism.z8
+=== RUN   TestAllGames/NudistsGoneWild.z8
+=== RUN   TestAllGames/OnYourBack.z5
+=== RUN   TestAllGames/OneGirl.z5
+=== RUN   TestAllGames/One_Game_in_Search_of_a_Story.z5
+=== RUN   TestAllGames/Ottumwa.z5
+=== RUN   TestAllGames/PS.z8
+=== RUN   TestAllGames/PUTPBAA.z5
+=== RUN   TestAllGames/Parc.z5
+=== RUN   TestAllGames/Peacock.z5
+=== RUN   TestAllGames/RBD.z8
+=== RUN   TestAllGames/Ralph.z5
+=== RUN   TestAllGames/Reddex.z8
+=== RUN   TestAllGames/Relief.z5
+=== RUN   TestAllGames/RoomSerial.z8
+=== RUN   TestAllGames/RtDoom.z5
+=== RUN   TestAllGames/SameGame.z5
+=== RUN   TestAllGames/Sangraal.z5
+=== RUN   TestAllGames/School.z5
+=== RUN   TestAllGames/Slackerx.z5
+=== RUN   TestAllGames/SoFar.z8
+=== RUN   TestAllGames/SoReality.z8
+=== RUN   TestAllGames/Somewhere.z5
+=== RUN   TestAllGames/SpAdventure.z5
+=== RUN   TestAllGames/Spring_2020.z8
+=== RUN   TestAllGames/Spycatcher.z5
+=== RUN   TestAllGames/Sturdlint.z5
+=== RUN   TestAllGames/SundayAfternoon.z8
+=== RUN   TestAllGames/Swineback.z5
+=== RUN   TestAllGames/TGM.z5
+=== RUN   TestAllGames/Tangle.z5
+=== RUN   TestAllGames/TheDayIShotHitler.z5
+=== RUN   TestAllGames/TheGarlicCage.z8
+=== RUN   TestAllGames/TheGrandQuest.z5
+=== RUN   TestAllGames/TheInvestment.z5
+=== RUN   TestAllGames/TheLastDarkDay.z5
+=== RUN   TestAllGames/TheRealisticNascarEXperience.z5
+=== RUN   TestAllGames/TheSmallRoom.z5
+=== RUN   TestAllGames/TheSpotlight.z8
+=== RUN   TestAllGames/TheValleyHouse.z8
+=== RUN   TestAllGames/The_Computer_Lady.z8
+=== RUN   TestAllGames/The_Fifth_Continent.z8
+=== RUN   TestAllGames/The_Grand_Tour.z8
+=== RUN   TestAllGames/The_Minimalist_Game.z5
+=== RUN   TestAllGames/The_Paper_Bag_Princess.z8
+=== RUN   TestAllGames/ThreeCowsAndTwoDoors.z5
+=== RUN   TestAllGames/TimeForTea.z8
+=== RUN   TestAllGames/Tokyo2.z5
+=== RUN   TestAllGames/Toxin.z8
+=== RUN   TestAllGames/Transporter.z5
+=== RUN   TestAllGames/TutorialHotel.z5
+=== RUN   TestAllGames/UMW.z8
+=== RUN   TestAllGames/UnderTheBed.z8
+=== RUN   TestAllGames/UniPool.z5
+=== RUN   TestAllGames/Vacation.z5
+=== RUN   TestAllGames/WalkInThePark.z5
+=== RUN   TestAllGames/Xeno.z5
+=== RUN   TestAllGames/ZTornado.z5
+=== RUN   TestAllGames/Zokoban.z5
+=== RUN   TestAllGames/Zork_LXIX.z5
+=== RUN   TestAllGames/aasmasters.z5
+=== RUN   TestAllGames/acorncourt.z5
+=== RUN   TestAllGames/adv440.z8
+=== RUN   TestAllGames/adv550.z8
+=== RUN   TestAllGames/adv551.z8
+=== RUN   TestAllGames/advent.z3
+=== RUN   TestAllGames/advent.z6
+    allgames_test.go:68: PANIC in advent.z6: 
+=== RUN   TestAllGames/advent.z8
+=== RUN   TestAllGames/adverbum.z5
+=== RUN   TestAllGames/alice3.z5
+=== RUN   TestAllGames/amish.z5
+=== RUN   TestAllGames/amiss.z5
+=== RUN   TestAllGames/animals.z5
+=== RUN   TestAllGames/annoy.z5
+=== RUN   TestAllGames/appall.z5
+=== RUN   TestAllGames/asterix.z5
+=== RUN   TestAllGames/atrocitron.z5
+=== RUN   TestAllGames/ats.z8
+=== RUN   TestAllGames/awaken.z5
+=== RUN   TestAllGames/awitl.z5
+=== RUN   TestAllGames/ayac.z5
+=== RUN   TestAllGames/azteca.z8
+=== RUN   TestAllGames/b2demo.z5
+=== RUN   TestAllGames/ballerina102.z8
+=== RUN   TestAllGames/bathtub.z5
+=== RUN   TestAllGames/bear.z5
+=== RUN   TestAllGames/bedlam.z5
+=== RUN   TestAllGames/beneath.z5
+=== RUN   TestAllGames/bishoes.z5
+=== RUN   TestAllGames/bj.z5
+=== RUN   TestAllGames/blair.z5
+=== RUN   TestAllGames/bluechairs.z5
+=== RUN   TestAllGames/blues.z5
+=== RUN   TestAllGames/bofh.z5
+=== RUN   TestAllGames/bomber.z5
+=== RUN   TestAllGames/bookvol.z5
+=== RUN   TestAllGames/booth.z5
+=== RUN   TestAllGames/boothdye.z5
+=== RUN   TestAllGames/brainofthenightguest.z8
+=== RUN   TestAllGames/break-in.z5
+=== RUN   TestAllGames/bse.z5
+=== RUN   TestAllGames/buccaneers_cache.z3
+=== RUN   TestAllGames/building.z5
+=== RUN   TestAllGames/bunny.z5
+=== RUN   TestAllGames/burglar.z5
+=== RUN   TestAllGames/cabal.z5
+=== RUN   TestAllGames/calypso.z5
+=== RUN   TestAllGames/candy.z5
+=== RUN   TestAllGames/castle.z8
+=== RUN   TestAllGames/castles-1.1.z5
+=== RUN   TestAllGames/catseye.z3
+=== RUN   TestAllGames/causality.z5
+=== RUN   TestAllGames/cavern.z5
+=== RUN   TestAllGames/cavetrip.z5
+=== RUN   TestAllGames/cheater.z5
+=== RUN   TestAllGames/cheeseshop.z5
+=== RUN   TestAllGames/cheshire-cat.z5
+=== RUN   TestAllGames/chico.z5
+=== RUN   TestAllGames/chix.z5
+=== RUN   TestAllGames/cia.z5
+=== RUN   TestAllGames/claw.z5
+=== RUN   TestAllGames/cleangetaway.z5
+=== RUN   TestAllGames/cluedo.z5
+=== RUN   TestAllGames/coldiron.z8
+=== RUN   TestAllGames/coloromc.z5
+=== RUN   TestAllGames/cryptographer.z5
+=== RUN   TestAllGames/csbb.z8
+=== RUN   TestAllGames/curses.z5
+=== RUN   TestAllGames/curves.z8
+=== RUN   TestAllGames/cycles.z5
+=== RUN   TestAllGames/darkiss1.z5
+=== RUN   TestAllGames/deadreck.z5
+=== RUN   TestAllGames/death.z5
+=== RUN   TestAllGames/deephome.z5
+=== RUN   TestAllGames/degen.z5
+=== RUN   TestAllGames/dejavu.z3
+=== RUN   TestAllGames/detective.z5
+=== RUN   TestAllGames/devdoit.z5
+=== RUN   TestAllGames/devours.z5
+=== RUN   TestAllGames/dewdrops.z5
+=== RUN   TestAllGames/djinni.z5
+=== RUN   TestAllGames/dogslife.z5
+=== RUN   TestAllGames/doll.z5
+=== RUN   TestAllGames/dontgo.z5
+=== RUN   TestAllGames/dracula.z8
+=== RUN   TestAllGames/dreamhold.z8
+=== RUN   TestAllGames/dumont.z5
+=== RUN   TestAllGames/edifice.z5
+=== RUN   TestAllGames/enter.z5
+=== RUN   TestAllGames/entropy.z8
+=== RUN   TestAllGames/eric_dm.z5
+=== RUN   TestAllGames/f209.z5
+=== RUN   TestAllGames/fable.z5
+=== RUN   TestAllGames/fantasydimension.z3
+=== RUN   TestAllGames/farm.z5
+=== RUN   TestAllGames/findesick.z8
+=== RUN   TestAllGames/forms.z5
+=== RUN   TestAllGames/fracture.z5
+=== RUN   TestAllGames/freefall.z5
+=== RUN   TestAllGames/frozen.z5
+=== RUN   TestAllGames/gatoron.z5
+=== RUN   TestAllGames/gaucho.z5
+=== RUN   TestAllGames/gd.z5
+=== RUN   TestAllGames/geb.z5
+=== RUN   TestAllGames/geist.z5
+=== RUN   TestAllGames/ghost.z8
+=== RUN   TestAllGames/ghostmountain.z5
+=== RUN   TestAllGames/godot.z5
+=== RUN   TestAllGames/gold.z5
+=== RUN   TestAllGames/golf.z5
+=== RUN   TestAllGames/gostak.z5
+=== RUN   TestAllGames/gsdemo.z8
+=== RUN   TestAllGames/guess.z5
+=== RUN   TestAllGames/guestret.z5
+=== RUN   TestAllGames/gussdeath.z3
+=== RUN   TestAllGames/h2.z5
+=== RUN   TestAllGames/hangar_22.z5
+=== RUN   TestAllGames/happy.z5
+=== RUN   TestAllGames/harry.z8
+=== RUN   TestAllGames/hauntings.z8
+=== RUN   TestAllGames/heist.z8
+=== RUN   TestAllGames/housekey1.z5
+=== RUN   TestAllGames/huntdark.z5
+=== RUN   TestAllGames/identity.z5
+=== RUN   TestAllGames/ill.z5
+=== RUN   TestAllGames/inhumane.z5
+=== RUN   TestAllGames/insight.z5
+=== RUN   TestAllGames/invisible.z8
+=== RUN   TestAllGames/jack.z5
+=== RUN   TestAllGames/jet.z8
+=== RUN   TestAllGames/jewel.z5
+=== RUN   TestAllGames/karn.z5
+=== RUN   TestAllGames/kidnapsea.z8
+=== RUN   TestAllGames/kiiwii.z5
+=== RUN   TestAllGames/kirby.z5
+=== RUN   TestAllGames/kitten.z5
+=== RUN   TestAllGames/kooku.z5
+=== RUN   TestAllGames/lambs.z5
+=== RUN   TestAllGames/lambs2.z5
+=== RUN   TestAllGames/largemac.z5
+=== RUN   TestAllGames/latenightmall.z5
+=== RUN   TestAllGames/leaptime.z8
+=== RUN   TestAllGames/library.z5
+=== RUN   TestAllGames/library_of_horror.z3
+=== RUN   TestAllGames/lily.z5
+=== RUN   TestAllGames/limp.z5
+=== RUN   TestAllGames/lion.z5
+=== RUN   TestAllGames/lists.z5
+=== RUN   TestAllGames/loose.z5
+=== RUN   TestAllGames/lost.z5
+=== RUN   TestAllGames/lucidnight.z5
+=== RUN   TestAllGames/ludicorp.z5
+=== RUN   TestAllGames/magic-toyshop.z5
+=== RUN   TestAllGames/mansion.z5
+=== RUN   TestAllGames/mars2049ad.z5
+=== RUN   TestAllGames/mary.z5
+=== RUN   TestAllGames/medusa.z5
+=== RUN   TestAllGames/memorylane.z5
+=== RUN   TestAllGames/metamorp.z5
+=== RUN   TestAllGames/mhpquest.z5
+=== RUN   TestAllGames/mimesis.z5
+=== RUN   TestAllGames/mindelec.z5
+=== RUN   TestAllGames/mines.z5
+=== RUN   TestAllGames/minster.z5
+=== RUN   TestAllGames/monster-maker.z8
+=== RUN   TestAllGames/moonglow.z3
+=== RUN   TestAllGames/mortlake.z8
+=== RUN   TestAllGames/mr-p.z5
+=== RUN   TestAllGames/mst3k1.z5
+=== RUN   TestAllGames/mst3k1_2.z5
+    allgames_test.go:68: PANIC in mst3k1_2.z5: 
+=== RUN   TestAllGames/mst3k2.z5
+    allgames_test.go:68: PANIC in mst3k2.z5: 
+=== RUN   TestAllGames/murderer.z5
+=== RUN   TestAllGames/muse.z5
+=== RUN   TestAllGames/musician.z8
+=== RUN   TestAllGames/mystery-of-winchester-high.z5
+=== RUN   TestAllGames/nameless.z8
+=== RUN   TestAllGames/newday.z5
+=== RUN   TestAllGames/night.z5
+=== RUN   TestAllGames/ninepts.z5
+=== RUN   TestAllGames/njag.z5
+=== RUN   TestAllGames/noroom.z5
+=== RUN   TestAllGames/northnorth.z8
+=== RUN   TestAllGames/nuntalylihu.z5
+=== RUN   TestAllGames/oad.z5
+=== RUN   TestAllGames/omniquest.z5
+=== RUN   TestAllGames/orevore.z8
+=== RUN   TestAllGames/orient_express.z5
+=== RUN   TestAllGames/orion.z5
+=== RUN   TestAllGames/pad.z5
+=== RUN   TestAllGames/paint.z5
+=== RUN   TestAllGames/paperchase.z5
+=== RUN   TestAllGames/parallel.z5
+=== RUN   TestAllGames/pentari.z5
+=== RUN   TestAllGames/permagic.z5
+=== RUN   TestAllGames/phlegm.z5
+=== RUN   TestAllGames/photopia.z5
+=== RUN   TestAllGames/piece_v3.z5
+=== RUN   TestAllGames/piracy_2.z5
+=== RUN   TestAllGames/praser5.z5
+=== RUN   TestAllGames/promoted.z5
+    allgames_test.go:68: PANIC in promoted.z5: 
+=== RUN   TestAllGames/puerto.z5
+=== RUN   TestAllGames/punkpnts.z5
+=== RUN   TestAllGames/pytho.z8
+=== RUN   TestAllGames/reading.z5
+=== RUN   TestAllGames/reser.z5
+=== RUN   TestAllGames/residnt2.z5
+    allgames_test.go:68: PANIC in residnt2.z5: 
+=== RUN   TestAllGames/reverb.z5
+=== RUN   TestAllGames/reverzi.z5
+=== RUN   TestAllGames/ribbons.z5
+=== RUN   TestAllGames/robots.z5
+=== RUN   TestAllGames/rogue.z5
+=== RUN   TestAllGames/samhain.z5
+=== RUN   TestAllGames/saveprinceton.z8
+=== RUN   TestAllGames/scald.z5
+=== RUN   TestAllGames/schooldays.z5
+=== RUN   TestAllGames/seacoral.z5
+=== RUN   TestAllGames/selection.z5
+=== RUN   TestAllGames/sfiction.z8
+=== RUN   TestAllGames/sgate.z5
+=== RUN   TestAllGames/sh1.z5
+=== RUN   TestAllGames/sh3.z5
+=== RUN   TestAllGames/sh4.z5
+=== RUN   TestAllGames/shade.z5
+=== RUN   TestAllGames/sherbet.z5
+=== RUN   TestAllGames/shrapnel.z5
+=== RUN   TestAllGames/six-gray-rats.z8
+=== RUN   TestAllGames/solitary.z5
+=== RUN   TestAllGames/spacest2.z5
+=== RUN   TestAllGames/spacez.z5
+=== RUN   TestAllGames/spirit.z5
+=== RUN   TestAllGames/sporkery1.z5
+=== RUN   TestAllGames/spot.z5
+=== RUN   TestAllGames/spring.z8
+=== RUN   TestAllGames/standing.z5
+=== RUN   TestAllGames/starlight.z8
+=== RUN   TestAllGames/stiffmst.z5
+=== RUN   TestAllGames/stiffy.z5
+=== RUN   TestAllGames/stinkorswim.z8
+=== RUN   TestAllGames/stonecage.z5
+=== RUN   TestAllGames/strike_force.z5
+=== RUN   TestAllGames/submarine-sabotage.z3
+=== RUN   TestAllGames/submarine-sabotage.z5
+=== RUN   TestAllGames/sunburst.z6
+    allgames_test.go:68: PANIC in sunburst.z6: 
+=== RUN   TestAllGames/sutwin.z5
+=== RUN   TestAllGames/suvehnux.z5
+=== RUN   TestAllGames/sycamora.z5
+=== RUN   TestAllGames/tKatC-SE.z8
+=== RUN   TestAllGames/taipan.z5
+=== RUN   TestAllGames/tatctae.z8
+=== RUN   TestAllGames/teacher.z5
+=== RUN   TestAllGames/tell.z5
+=== RUN   TestAllGames/temple.z5
+=== RUN   TestAllGames/terror_tabby.z5
+=== RUN   TestAllGames/tess.z5
+=== RUN   TestAllGames/tfmdemo.z8
+=== RUN   TestAllGames/the-grumpy-cricket.z8
+=== RUN   TestAllGames/the_job.z5
+=== RUN   TestAllGames/theatre.z5
+=== RUN   TestAllGames/thegallery.z5
+=== RUN   TestAllGames/thegreat.z5
+=== RUN   TestAllGames/thestargods.z8
+=== RUN   TestAllGames/thorn.z5
+=== RUN   TestAllGames/thornfell_manor_1984.z5
+=== RUN   TestAllGames/threemore.z5
+=== RUN   TestAllGames/tk1.z5
+=== RUN   TestAllGames/traffic.z5
+=== RUN   TestAllGames/troll.z5
+=== RUN   TestAllGames/trw.z5
+=== RUN   TestAllGames/tryst205.z5
+=== RUN   TestAllGames/tube.z5
+=== RUN   TestAllGames/uhoh-demo.z5
+=== RUN   TestAllGames/under.z5
+=== RUN   TestAllGames/uninvited.z5
+=== RUN   TestAllGames/vampire.z8
+=== RUN   TestAllGames/venice.z5
+=== RUN   TestAllGames/vespers.z8
+=== RUN   TestAllGames/vgame.z8
+=== RUN   TestAllGames/vigilance.z5
+=== RUN   TestAllGames/vindaloo.z5
+=== RUN   TestAllGames/vision.z5
+=== RUN   TestAllGames/visitor.z5
+=== RUN   TestAllGames/wadewar3.z5
+=== RUN   TestAllGames/warp.z5
+=== RUN   TestAllGames/wcastle.z5
+=== RUN   TestAllGames/weather.z5
+=== RUN   TestAllGames/wedding.z5
+=== RUN   TestAllGames/weirdness.z5
+=== RUN   TestAllGames/whispers.z5
+=== RUN   TestAllGames/winchest.z8
+=== RUN   TestAllGames/windhal1.z8
+=== RUN   TestAllGames/winter.z5
+=== RUN   TestAllGames/wireless.z5
+=== RUN   TestAllGames/woman.z8
+=== RUN   TestAllGames/wossname.z5
+=== RUN   TestAllGames/wump2ka.z5
+=== RUN   TestAllGames/wumpus.z5
+=== RUN   TestAllGames/wurm.z5
+=== RUN   TestAllGames/yagwad.z5
+=== RUN   TestAllGames/z-life.z5
+=== RUN   TestAllGames/zball.z5
+=== RUN   TestAllGames/zcamel.z5
+=== RUN   TestAllGames/zdungeon.z5
+=== RUN   TestAllGames/zegro.z8
+=== RUN   TestAllGames/zenon.z5
+=== RUN   TestAllGames/zfiles.z8
+=== RUN   TestAllGames/zombies.z5
+=== RUN   TestAllGames/zork_285.z5
+=== RUN   TestAllGames/zracer.z5
+=== RUN   TestAllGames/zsnake.z5
+=== RUN   TestAllGames/ztrek.z5
+=== NAME  TestAllGames
+    allgames_test.go:79: Results written to ../testdata/test_results.json
+    allgames_test.go:92: 
+        === SUMMARY ===
+        Passed: 460
+        Failed: 6
+        Total: 466
+--- PASS: TestAllGames (22.64s)
+    --- PASS: TestAllGames/7doctors.z5 (0.00s)
+    --- PASS: TestAllGames/905.z5 (0.00s)
+    --- PASS: TestAllGames/A1RL0CK.z5 (0.00s)
+    --- PASS: TestAllGames/AOTYRZ.z5 (0.00s)
+    --- PASS: TestAllGames/Acheton.z8 (0.01s)
+    --- PASS: TestAllGames/Advent.z5 (0.00s)
+    --- PASS: TestAllGames/Advent_Crowther.z8 (0.01s)
+    --- PASS: TestAllGames/Adventureland.z5 (0.00s)
+    --- PASS: TestAllGames/AlongTheRiver.z5 (0.00s)
+    --- PASS: TestAllGames/Alpha.z5 (0.00s)
+    --- PASS: TestAllGames/Ambassadors_Daughter.z8 (0.03s)
+    --- PASS: TestAllGames/AndAHippoNewYear.z8 (0.03s)
+    --- PASS: TestAllGames/Andromeda_Genesis.z8 (0.03s)
+    --- PASS: TestAllGames/Asylum.z5 (0.02s)
+    --- PASS: TestAllGames/AtWork.z5 (0.00s)
+    --- PASS: TestAllGames/Aug4.z8 (0.01s)
+    --- PASS: TestAllGames/Avon.z5 (0.00s)
+    --- PASS: TestAllGames/B7_Snare.z8 (0.01s)
+    --- PASS: TestAllGames/Balances.z5 (0.00s)
+    --- PASS: TestAllGames/BibleRetold.z5 (0.00s)
+    --- PASS: TestAllGames/Biscuit.z5 (0.01s)
+    --- PASS: TestAllGames/BlackNWhiteRag.z5 (0.00s)
+    --- PASS: TestAllGames/BrandX.z5 (0.00s)
+    --- PASS: TestAllGames/Cacophony.z8 (0.01s)
+    --- PASS: TestAllGames/Calendar.z5 (0.00s)
+    --- PASS: TestAllGames/CalmMuteMoving.z5 (0.01s)
+    --- PASS: TestAllGames/Casting.z5 (0.00s)
+    --- PASS: TestAllGames/Chaos.z5 (0.00s)
+    --- PASS: TestAllGames/Code_Name_Silver_Steel.z8 (0.02s)
+    --- PASS: TestAllGames/Comp96.z5 (0.00s)
+    --- PASS: TestAllGames/ConanKillEverything.z5 (0.00s)
+    --- PASS: TestAllGames/Cove.z5 (0.01s)
+    --- PASS: TestAllGames/CriticalBreach.z8 (0.01s)
+    --- PASS: TestAllGames/Crobe.z5 (0.00s)
+    --- PASS: TestAllGames/CtDoom.z5 (0.00s)
+    --- PASS: TestAllGames/Cyclops.z5 (0.00s)
+    --- PASS: TestAllGames/DDIV.z5 (0.00s)
+    --- PASS: TestAllGames/Debate.z5 (0.01s)
+    --- PASS: TestAllGames/Delusns.z5 (0.00s)
+    --- PASS: TestAllGames/DontPeeYourself.z8 (0.01s)
+    --- PASS: TestAllGames/Dont_Push_The_Mailbox.z8 (0.00s)
+    --- PASS: TestAllGames/DragonTroll.z5 (0.00s)
+    --- PASS: TestAllGames/DuckMe.z3 (0.00s)
+    --- PASS: TestAllGames/Egyptian_Walking_Simulator.z8 (0.01s)
+    --- PASS: TestAllGames/Elephants.z5 (0.01s)
+    --- PASS: TestAllGames/Enemies.z8 (0.00s)
+    --- PASS: TestAllGames/FFF.z5 (0.00s)
+    --- PASS: TestAllGames/FailSafe.z5 (0.00s)
+    --- PASS: TestAllGames/Fairyland.z8 (0.00s)
+    --- PASS: TestAllGames/FineTune.z8 (0.00s)
+    --- PASS: TestAllGames/Fork.z5 (0.00s)
+    --- PASS: TestAllGames/Frobozzi.z5 (0.01s)
+    --- PASS: TestAllGames/Fyleet.z5 (0.00s)
+    --- PASS: TestAllGames/GA.z5 (0.01s)
+    --- PASS: TestAllGames/GerbilRiot.z5 (0.00s)
+    --- PASS: TestAllGames/GreatXavio.z5 (0.00s)
+    --- PASS: TestAllGames/Grue.z8 (0.00s)
+    --- PASS: TestAllGames/Gumshoe.z5 (0.00s)
+    --- PASS: TestAllGames/HLAinform.z5 (0.00s)
+    --- PASS: TestAllGames/HallowEve.z8 (0.01s)
+    --- PASS: TestAllGames/Hamil.z5 (0.00s)
+    --- PASS: TestAllGames/Hat.z5 (0.01s)
+    --- PASS: TestAllGames/Help.z8 (0.00s)
+    --- PASS: TestAllGames/Heroine.z8 (0.00s)
+    --- PASS: TestAllGames/Hide_a_pachyderm%21.z5 (0.01s)
+    --- PASS: TestAllGames/Home.z5 (0.01s)
+    --- PASS: TestAllGames/HouseOfDreamOfMoon.z8 (0.01s)
+    --- PASS: TestAllGames/HugeCave.z8 (0.00s)
+    --- PASS: TestAllGames/HugeHint.z5 (0.00s)
+    --- PASS: TestAllGames/I-0.z5 (0.01s)
+    --- PASS: TestAllGames/IF_Whispers_5.z8 (0.01s)
+    --- PASS: TestAllGames/Ibo.z5 (0.00s)
+    --- PASS: TestAllGames/ImpossibleStairs.z8 (0.00s)
+    --- PASS: TestAllGames/Inevita.z5 (0.01s)
+    --- PASS: TestAllGames/Informat.z5 (0.00s)
+    --- PASS: TestAllGames/Jigsaw.z8 (0.00s)
+    --- PASS: TestAllGames/Jigsaw_Footnotes.z5 (0.00s)
+    --- PASS: TestAllGames/Jigsaw_Game.z5 (0.00s)
+    --- PASS: TestAllGames/Kentish_Plover.z8 (0.00s)
+    --- PASS: TestAllGames/LDoDoom.z5 (0.00s)
+    --- PASS: TestAllGames/LLR3.z8 (0.07s)
+    --- PASS: TestAllGames/Leopold.z5 (0.00s)
+    --- PASS: TestAllGames/LostPig.z8 (0.00s)
+    --- PASS: TestAllGames/LostSheep.z5 (0.00s)
+    --- PASS: TestAllGames/Mahadev.z5 (0.00s)
+    --- PASS: TestAllGames/MakeItGood.z8 (0.01s)
+    --- PASS: TestAllGames/Mask.z5 (0.01s)
+    --- PASS: TestAllGames/Mercury_Trucking.z5 (0.00s)
+    --- PASS: TestAllGames/Mercy.z5 (0.00s)
+    --- PASS: TestAllGames/Misdirection.z5 (0.00s)
+    --- PASS: TestAllGames/More.z8 (0.00s)
+    --- PASS: TestAllGames/Mulldoon.z8 (0.00s)
+    --- PASS: TestAllGames/Mullmurd.z5 (0.00s)
+    --- PASS: TestAllGames/Murdac.z5 (0.00s)
+    --- PASS: TestAllGames/My_Angel.z5 (0.00s)
+    --- PASS: TestAllGames/Nidus.z5 (0.00s)
+    --- PASS: TestAllGames/Nihilism.z8 (0.00s)
+    --- PASS: TestAllGames/NudistsGoneWild.z8 (0.01s)
+    --- PASS: TestAllGames/OnYourBack.z5 (0.00s)
+    --- PASS: TestAllGames/OneGirl.z5 (0.00s)
+    --- PASS: TestAllGames/One_Game_in_Search_of_a_Story.z5 (0.00s)
+    --- PASS: TestAllGames/Ottumwa.z5 (0.00s)
+    --- PASS: TestAllGames/PS.z8 (0.00s)
+    --- PASS: TestAllGames/PUTPBAA.z5 (0.00s)
+    --- PASS: TestAllGames/Parc.z5 (0.00s)
+    --- PASS: TestAllGames/Peacock.z5 (0.01s)
+    --- PASS: TestAllGames/RBD.z8 (0.01s)
+    --- PASS: TestAllGames/Ralph.z5 (0.00s)
+    --- PASS: TestAllGames/Reddex.z8 (0.00s)
+    --- PASS: TestAllGames/Relief.z5 (0.00s)
+    --- PASS: TestAllGames/RoomSerial.z8 (0.01s)
+    --- PASS: TestAllGames/RtDoom.z5 (0.00s)
+    --- PASS: TestAllGames/SameGame.z5 (0.00s)
+    --- PASS: TestAllGames/Sangraal.z5 (0.00s)
+    --- PASS: TestAllGames/School.z5 (0.00s)
+    --- PASS: TestAllGames/Slackerx.z5 (0.00s)
+    --- PASS: TestAllGames/SoFar.z8 (0.00s)
+    --- PASS: TestAllGames/SoReality.z8 (0.00s)
+    --- PASS: TestAllGames/Somewhere.z5 (0.00s)
+    --- PASS: TestAllGames/SpAdventure.z5 (0.00s)
+    --- PASS: TestAllGames/Spring_2020.z8 (0.00s)
+    --- PASS: TestAllGames/Spycatcher.z5 (0.00s)
+    --- PASS: TestAllGames/Sturdlint.z5 (0.01s)
+    --- PASS: TestAllGames/SundayAfternoon.z8 (0.02s)
+    --- PASS: TestAllGames/Swineback.z5 (0.00s)
+    --- PASS: TestAllGames/TGM.z5 (0.00s)
+    --- PASS: TestAllGames/Tangle.z5 (0.00s)
+    --- PASS: TestAllGames/TheDayIShotHitler.z5 (0.01s)
+    --- PASS: TestAllGames/TheGarlicCage.z8 (0.01s)
+    --- PASS: TestAllGames/TheGrandQuest.z5 (0.00s)
+    --- PASS: TestAllGames/TheInvestment.z5 (0.00s)
+    --- PASS: TestAllGames/TheLastDarkDay.z5 (0.00s)
+    --- PASS: TestAllGames/TheRealisticNascarEXperience.z5 (0.00s)
+    --- PASS: TestAllGames/TheSmallRoom.z5 (0.00s)
+    --- PASS: TestAllGames/TheSpotlight.z8 (0.01s)
+    --- PASS: TestAllGames/TheValleyHouse.z8 (0.02s)
+    --- PASS: TestAllGames/The_Computer_Lady.z8 (0.00s)
+    --- PASS: TestAllGames/The_Fifth_Continent.z8 (0.00s)
+    --- PASS: TestAllGames/The_Grand_Tour.z8 (0.00s)
+    --- PASS: TestAllGames/The_Minimalist_Game.z5 (0.00s)
+    --- PASS: TestAllGames/The_Paper_Bag_Princess.z8 (0.01s)
+    --- PASS: TestAllGames/ThreeCowsAndTwoDoors.z5 (0.01s)
+    --- PASS: TestAllGames/TimeForTea.z8 (0.02s)
+    --- PASS: TestAllGames/Tokyo2.z5 (0.00s)
+    --- PASS: TestAllGames/Toxin.z8 (0.00s)
+    --- PASS: TestAllGames/Transporter.z5 (0.00s)
+    --- PASS: TestAllGames/TutorialHotel.z5 (0.00s)
+    --- PASS: TestAllGames/UMW.z8 (0.01s)
+    --- PASS: TestAllGames/UnderTheBed.z8 (0.01s)
+    --- PASS: TestAllGames/UniPool.z5 (0.00s)
+    --- PASS: TestAllGames/Vacation.z5 (0.00s)
+    --- PASS: TestAllGames/WalkInThePark.z5 (0.00s)
+    --- PASS: TestAllGames/Xeno.z5 (0.00s)
+    --- PASS: TestAllGames/ZTornado.z5 (0.00s)
+    --- PASS: TestAllGames/Zokoban.z5 (0.00s)
+    --- PASS: TestAllGames/Zork_LXIX.z5 (0.01s)
+    --- PASS: TestAllGames/aasmasters.z5 (0.00s)
+    --- PASS: TestAllGames/acorncourt.z5 (0.00s)
+    --- PASS: TestAllGames/adv440.z8 (0.00s)
+    --- PASS: TestAllGames/adv550.z8 (0.00s)
+    --- PASS: TestAllGames/adv551.z8 (0.00s)
+    --- PASS: TestAllGames/advent.z3 (0.00s)
+    --- PASS: TestAllGames/advent.z6 (0.00s)
+    --- PASS: TestAllGames/advent.z8 (0.00s)
+    --- PASS: TestAllGames/adverbum.z5 (0.00s)
+    --- PASS: TestAllGames/alice3.z5 (0.00s)
+    --- PASS: TestAllGames/amish.z5 (0.00s)
+    --- PASS: TestAllGames/amiss.z5 (0.00s)
+    --- PASS: TestAllGames/animals.z5 (0.00s)
+    --- PASS: TestAllGames/annoy.z5 (0.00s)
+    --- PASS: TestAllGames/appall.z5 (0.00s)
+    --- PASS: TestAllGames/asterix.z5 (0.00s)
+    --- PASS: TestAllGames/atrocitron.z5 (0.00s)
+    --- PASS: TestAllGames/ats.z8 (0.00s)
+    --- PASS: TestAllGames/awaken.z5 (0.00s)
+    --- PASS: TestAllGames/awitl.z5 (0.00s)
+    --- PASS: TestAllGames/ayac.z5 (0.00s)
+    --- PASS: TestAllGames/azteca.z8 (0.00s)
+    --- PASS: TestAllGames/b2demo.z5 (0.00s)
+    --- PASS: TestAllGames/ballerina102.z8 (0.00s)
+    --- PASS: TestAllGames/bathtub.z5 (0.00s)
+    --- PASS: TestAllGames/bear.z5 (0.00s)
+    --- PASS: TestAllGames/bedlam.z5 (0.00s)
+    --- PASS: TestAllGames/beneath.z5 (0.00s)
+    --- PASS: TestAllGames/bishoes.z5 (0.00s)
+    --- PASS: TestAllGames/bj.z5 (0.00s)
+    --- PASS: TestAllGames/blair.z5 (0.00s)
+    --- PASS: TestAllGames/bluechairs.z5 (0.00s)
+    --- PASS: TestAllGames/blues.z5 (0.01s)
+    --- PASS: TestAllGames/bofh.z5 (0.00s)
+    --- PASS: TestAllGames/bomber.z5 (0.00s)
+    --- PASS: TestAllGames/bookvol.z5 (0.00s)
+    --- PASS: TestAllGames/booth.z5 (0.00s)
+    --- PASS: TestAllGames/boothdye.z5 (0.00s)
+    --- PASS: TestAllGames/brainofthenightguest.z8 (0.01s)
+    --- PASS: TestAllGames/break-in.z5 (0.00s)
+    --- PASS: TestAllGames/bse.z5 (0.00s)
+    --- PASS: TestAllGames/buccaneers_cache.z3 (0.00s)
+    --- PASS: TestAllGames/building.z5 (0.01s)
+    --- PASS: TestAllGames/bunny.z5 (0.00s)
+    --- PASS: TestAllGames/burglar.z5 (0.00s)
+    --- PASS: TestAllGames/cabal.z5 (0.00s)
+    --- PASS: TestAllGames/calypso.z5 (0.00s)
+    --- PASS: TestAllGames/candy.z5 (0.00s)
+    --- PASS: TestAllGames/castle.z8 (0.01s)
+    --- PASS: TestAllGames/castles-1.1.z5 (0.00s)
+    --- PASS: TestAllGames/catseye.z3 (0.00s)
+    --- PASS: TestAllGames/causality.z5 (0.00s)
+    --- PASS: TestAllGames/cavern.z5 (0.00s)
+    --- PASS: TestAllGames/cavetrip.z5 (0.00s)
+    --- PASS: TestAllGames/cheater.z5 (0.00s)
+    --- PASS: TestAllGames/cheeseshop.z5 (0.00s)
+    --- PASS: TestAllGames/cheshire-cat.z5 (0.00s)
+    --- PASS: TestAllGames/chico.z5 (0.00s)
+    --- PASS: TestAllGames/chix.z5 (0.00s)
+    --- PASS: TestAllGames/cia.z5 (0.00s)
+    --- PASS: TestAllGames/claw.z5 (0.00s)
+    --- PASS: TestAllGames/cleangetaway.z5 (0.00s)
+    --- PASS: TestAllGames/cluedo.z5 (0.00s)
+    --- PASS: TestAllGames/coldiron.z8 (0.01s)
+    --- PASS: TestAllGames/coloromc.z5 (0.00s)
+    --- PASS: TestAllGames/cryptographer.z5 (0.01s)
+    --- PASS: TestAllGames/csbb.z8 (0.00s)
+    --- PASS: TestAllGames/curses.z5 (0.00s)
+    --- PASS: TestAllGames/curves.z8 (0.00s)
+    --- PASS: TestAllGames/cycles.z5 (0.00s)
+    --- PASS: TestAllGames/darkiss1.z5 (0.00s)
+    --- PASS: TestAllGames/deadreck.z5 (0.01s)
+    --- PASS: TestAllGames/death.z5 (0.00s)
+    --- PASS: TestAllGames/deephome.z5 (0.00s)
+    --- PASS: TestAllGames/degen.z5 (0.00s)
+    --- PASS: TestAllGames/dejavu.z3 (0.00s)
+    --- PASS: TestAllGames/detective.z5 (0.00s)
+    --- PASS: TestAllGames/devdoit.z5 (0.00s)
+    --- PASS: TestAllGames/devours.z5 (0.01s)
+    --- PASS: TestAllGames/dewdrops.z5 (0.00s)
+    --- PASS: TestAllGames/djinni.z5 (0.00s)
+    --- PASS: TestAllGames/dogslife.z5 (0.00s)
+    --- PASS: TestAllGames/doll.z5 (0.00s)
+    --- PASS: TestAllGames/dontgo.z5 (0.00s)
+    --- PASS: TestAllGames/dracula.z8 (0.00s)
+    --- PASS: TestAllGames/dreamhold.z8 (0.00s)
+    --- PASS: TestAllGames/dumont.z5 (0.01s)
+    --- PASS: TestAllGames/edifice.z5 (0.00s)
+    --- PASS: TestAllGames/enter.z5 (0.01s)
+    --- PASS: TestAllGames/entropy.z8 (0.00s)
+    --- PASS: TestAllGames/eric_dm.z5 (0.00s)
+    --- PASS: TestAllGames/f209.z5 (0.00s)
+    --- PASS: TestAllGames/fable.z5 (0.00s)
+    --- PASS: TestAllGames/fantasydimension.z3 (0.00s)
+    --- PASS: TestAllGames/farm.z5 (0.00s)
+    --- PASS: TestAllGames/findesick.z8 (0.00s)
+    --- PASS: TestAllGames/forms.z5 (0.00s)
+    --- PASS: TestAllGames/fracture.z5 (0.01s)
+    --- PASS: TestAllGames/freefall.z5 (0.00s)
+    --- PASS: TestAllGames/frozen.z5 (0.00s)
+    --- PASS: TestAllGames/gatoron.z5 (0.00s)
+    --- PASS: TestAllGames/gaucho.z5 (0.00s)
+    --- PASS: TestAllGames/gd.z5 (0.00s)
+    --- PASS: TestAllGames/geb.z5 (0.01s)
+    --- PASS: TestAllGames/geist.z5 (0.00s)
+    --- PASS: TestAllGames/ghost.z8 (0.00s)
+    --- PASS: TestAllGames/ghostmountain.z5 (0.00s)
+    --- PASS: TestAllGames/godot.z5 (0.00s)
+    --- PASS: TestAllGames/gold.z5 (0.01s)
+    --- PASS: TestAllGames/golf.z5 (0.00s)
+    --- PASS: TestAllGames/gostak.z5 (0.00s)
+    --- PASS: TestAllGames/gsdemo.z8 (0.00s)
+    --- PASS: TestAllGames/guess.z5 (0.00s)
+    --- PASS: TestAllGames/guestret.z5 (0.00s)
+    --- PASS: TestAllGames/gussdeath.z3 (0.00s)
+    --- PASS: TestAllGames/h2.z5 (0.00s)
+    --- PASS: TestAllGames/hangar_22.z5 (0.00s)
+    --- PASS: TestAllGames/happy.z5 (0.00s)
+    --- PASS: TestAllGames/harry.z8 (0.01s)
+    --- PASS: TestAllGames/hauntings.z8 (0.01s)
+    --- PASS: TestAllGames/heist.z8 (0.00s)
+    --- PASS: TestAllGames/housekey1.z5 (0.01s)
+    --- PASS: TestAllGames/huntdark.z5 (0.00s)
+    --- PASS: TestAllGames/identity.z5 (0.00s)
+    --- PASS: TestAllGames/ill.z5 (0.00s)
+    --- PASS: TestAllGames/inhumane.z5 (0.00s)
+    --- PASS: TestAllGames/insight.z5 (0.00s)
+    --- PASS: TestAllGames/invisible.z8 (0.04s)
+    --- PASS: TestAllGames/jack.z5 (0.00s)
+    --- PASS: TestAllGames/jet.z8 (0.00s)
+    --- PASS: TestAllGames/jewel.z5 (0.00s)
+    --- PASS: TestAllGames/karn.z5 (0.00s)
+    --- PASS: TestAllGames/kidnapsea.z8 (0.01s)
+    --- PASS: TestAllGames/kiiwii.z5 (0.01s)
+    --- PASS: TestAllGames/kirby.z5 (0.00s)
+    --- PASS: TestAllGames/kitten.z5 (0.00s)
+    --- PASS: TestAllGames/kooku.z5 (0.00s)
+    --- PASS: TestAllGames/lambs.z5 (0.00s)
+    --- PASS: TestAllGames/lambs2.z5 (0.00s)
+    --- PASS: TestAllGames/largemac.z5 (0.00s)
+    --- PASS: TestAllGames/latenightmall.z5 (0.00s)
+    --- PASS: TestAllGames/leaptime.z8 (0.01s)
+    --- PASS: TestAllGames/library.z5 (0.00s)
+    --- PASS: TestAllGames/library_of_horror.z3 (0.00s)
+    --- PASS: TestAllGames/lily.z5 (0.00s)
+    --- PASS: TestAllGames/limp.z5 (0.00s)
+    --- PASS: TestAllGames/lion.z5 (0.00s)
+    --- PASS: TestAllGames/lists.z5 (0.00s)
+    --- PASS: TestAllGames/loose.z5 (0.00s)
+    --- PASS: TestAllGames/lost.z5 (0.00s)
+    --- PASS: TestAllGames/lucidnight.z5 (0.00s)
+    --- PASS: TestAllGames/ludicorp.z5 (0.00s)
+    --- PASS: TestAllGames/magic-toyshop.z5 (0.00s)
+    --- PASS: TestAllGames/mansion.z5 (0.00s)
+    --- PASS: TestAllGames/mars2049ad.z5 (0.00s)
+    --- PASS: TestAllGames/mary.z5 (0.00s)
+    --- PASS: TestAllGames/medusa.z5 (0.01s)
+    --- PASS: TestAllGames/memorylane.z5 (0.00s)
+    --- PASS: TestAllGames/metamorp.z5 (0.01s)
+    --- PASS: TestAllGames/mhpquest.z5 (0.00s)
+    --- PASS: TestAllGames/mimesis.z5 (0.00s)
+    --- PASS: TestAllGames/mindelec.z5 (0.00s)
+    --- PASS: TestAllGames/mines.z5 (0.00s)
+    --- PASS: TestAllGames/minster.z5 (0.00s)
+    --- PASS: TestAllGames/monster-maker.z8 (0.01s)
+    --- PASS: TestAllGames/moonglow.z3 (0.00s)
+    --- PASS: TestAllGames/mortlake.z8 (0.04s)
+    --- PASS: TestAllGames/mr-p.z5 (0.00s)
+    --- PASS: TestAllGames/mst3k1.z5 (0.00s)
+    --- PASS: TestAllGames/mst3k1_2.z5 (5.00s)
+    --- PASS: TestAllGames/mst3k2.z5 (5.00s)
+    --- PASS: TestAllGames/murderer.z5 (0.01s)
+    --- PASS: TestAllGames/muse.z5 (0.00s)
+    --- PASS: TestAllGames/musician.z8 (0.01s)
+    --- PASS: TestAllGames/mystery-of-winchester-high.z5 (0.00s)
+    --- PASS: TestAllGames/nameless.z8 (0.04s)
+    --- PASS: TestAllGames/newday.z5 (0.00s)
+    --- PASS: TestAllGames/night.z5 (0.00s)
+    --- PASS: TestAllGames/ninepts.z5 (0.00s)
+    --- PASS: TestAllGames/njag.z5 (0.00s)
+    --- PASS: TestAllGames/noroom.z5 (0.00s)
+    --- PASS: TestAllGames/northnorth.z8 (0.02s)
+    --- PASS: TestAllGames/nuntalylihu.z5 (0.00s)
+    --- PASS: TestAllGames/oad.z5 (0.00s)
+    --- PASS: TestAllGames/omniquest.z5 (0.00s)
+    --- PASS: TestAllGames/orevore.z8 (0.01s)
+    --- PASS: TestAllGames/orient_express.z5 (0.01s)
+    --- PASS: TestAllGames/orion.z5 (0.01s)
+    --- PASS: TestAllGames/pad.z5 (0.00s)
+    --- PASS: TestAllGames/paint.z5 (0.00s)
+    --- PASS: TestAllGames/paperchase.z5 (0.00s)
+    --- PASS: TestAllGames/parallel.z5 (0.01s)
+    --- PASS: TestAllGames/pentari.z5 (0.00s)
+    --- PASS: TestAllGames/permagic.z5 (0.00s)
+    --- PASS: TestAllGames/phlegm.z5 (0.00s)
+    --- PASS: TestAllGames/photopia.z5 (0.00s)
+    --- PASS: TestAllGames/piece_v3.z5 (0.00s)
+    --- PASS: TestAllGames/piracy_2.z5 (0.00s)
+    --- PASS: TestAllGames/praser5.z5 (0.00s)
+    --- PASS: TestAllGames/promoted.z5 (5.00s)
+    --- PASS: TestAllGames/puerto.z5 (0.00s)
+    --- PASS: TestAllGames/punkpnts.z5 (0.00s)
+    --- PASS: TestAllGames/pytho.z8 (0.00s)
+    --- PASS: TestAllGames/reading.z5 (0.01s)
+    --- PASS: TestAllGames/reser.z5 (0.00s)
+    --- PASS: TestAllGames/residnt2.z5 (5.00s)
+    --- PASS: TestAllGames/reverb.z5 (0.15s)
+    --- PASS: TestAllGames/reverzi.z5 (0.01s)
+    --- PASS: TestAllGames/ribbons.z5 (0.01s)
+    --- PASS: TestAllGames/robots.z5 (0.00s)
+    --- PASS: TestAllGames/rogue.z5 (0.00s)
+    --- PASS: TestAllGames/samhain.z5 (0.00s)
+    --- PASS: TestAllGames/saveprinceton.z8 (0.00s)
+    --- PASS: TestAllGames/scald.z5 (0.04s)
+    --- PASS: TestAllGames/schooldays.z5 (0.00s)
+    --- PASS: TestAllGames/seacoral.z5 (0.01s)
+    --- PASS: TestAllGames/selection.z5 (0.00s)
+    --- PASS: TestAllGames/sfiction.z8 (0.05s)
+    --- PASS: TestAllGames/sgate.z5 (0.00s)
+    --- PASS: TestAllGames/sh1.z5 (0.00s)
+    --- PASS: TestAllGames/sh3.z5 (0.00s)
+    --- PASS: TestAllGames/sh4.z5 (0.00s)
+    --- PASS: TestAllGames/shade.z5 (0.01s)
+    --- PASS: TestAllGames/sherbet.z5 (0.00s)
+    --- PASS: TestAllGames/shrapnel.z5 (0.00s)
+    --- PASS: TestAllGames/six-gray-rats.z8 (0.04s)
+    --- PASS: TestAllGames/solitary.z5 (0.00s)
+    --- PASS: TestAllGames/spacest2.z5 (0.01s)
+    --- PASS: TestAllGames/spacez.z5 (0.02s)
+    --- PASS: TestAllGames/spirit.z5 (0.00s)
+    --- PASS: TestAllGames/sporkery1.z5 (0.01s)
+    --- PASS: TestAllGames/spot.z5 (0.00s)
+    --- PASS: TestAllGames/spring.z8 (0.00s)
+    --- PASS: TestAllGames/standing.z5 (0.00s)
+    --- PASS: TestAllGames/starlight.z8 (0.17s)
+    --- PASS: TestAllGames/stiffmst.z5 (0.00s)
+    --- PASS: TestAllGames/stiffy.z5 (0.00s)
+    --- PASS: TestAllGames/stinkorswim.z8 (0.00s)
+    --- PASS: TestAllGames/stonecage.z5 (0.05s)
+    --- PASS: TestAllGames/strike_force.z5 (0.00s)
+    --- PASS: TestAllGames/submarine-sabotage.z3 (0.00s)
+    --- PASS: TestAllGames/submarine-sabotage.z5 (0.00s)
+    --- PASS: TestAllGames/sunburst.z6 (0.00s)
+    --- PASS: TestAllGames/sutwin.z5 (0.00s)
+    --- PASS: TestAllGames/suvehnux.z5 (0.00s)
+    --- PASS: TestAllGames/sycamora.z5 (0.00s)
+    --- PASS: TestAllGames/tKatC-SE.z8 (0.00s)
+    --- PASS: TestAllGames/taipan.z5 (0.00s)
+    --- PASS: TestAllGames/tatctae.z8 (0.00s)
+    --- PASS: TestAllGames/teacher.z5 (0.00s)
+    --- PASS: TestAllGames/tell.z5 (0.00s)
+    --- PASS: TestAllGames/temple.z5 (0.00s)
+    --- PASS: TestAllGames/terror_tabby.z5 (0.00s)
+    --- PASS: TestAllGames/tess.z5 (0.00s)
+    --- PASS: TestAllGames/tfmdemo.z8 (0.02s)
+    --- PASS: TestAllGames/the-grumpy-cricket.z8 (0.02s)
+    --- PASS: TestAllGames/the_job.z5 (0.00s)
+    --- PASS: TestAllGames/theatre.z5 (0.00s)
+    --- PASS: TestAllGames/thegallery.z5 (0.00s)
+    --- PASS: TestAllGames/thegreat.z5 (0.00s)
+    --- PASS: TestAllGames/thestargods.z8 (0.14s)
+    --- PASS: TestAllGames/thorn.z5 (0.00s)
+    --- PASS: TestAllGames/thornfell_manor_1984.z5 (0.00s)
+    --- PASS: TestAllGames/threemore.z5 (0.02s)
+    --- PASS: TestAllGames/tk1.z5 (0.00s)
+    --- PASS: TestAllGames/traffic.z5 (0.01s)
+    --- PASS: TestAllGames/troll.z5 (0.00s)
+    --- PASS: TestAllGames/trw.z5 (0.00s)
+    --- PASS: TestAllGames/tryst205.z5 (0.00s)
+    --- PASS: TestAllGames/tube.z5 (0.00s)
+    --- PASS: TestAllGames/uhoh-demo.z5 (0.00s)
+    --- PASS: TestAllGames/under.z5 (0.00s)
+    --- PASS: TestAllGames/uninvited.z5 (0.02s)
+    --- PASS: TestAllGames/vampire.z8 (0.00s)
+    --- PASS: TestAllGames/venice.z5 (0.01s)
+    --- PASS: TestAllGames/vespers.z8 (0.00s)
+    --- PASS: TestAllGames/vgame.z8 (0.00s)
+    --- PASS: TestAllGames/vigilance.z5 (0.00s)
+    --- PASS: TestAllGames/vindaloo.z5 (0.00s)
+    --- PASS: TestAllGames/vision.z5 (0.00s)
+    --- PASS: TestAllGames/visitor.z5 (0.00s)
+    --- PASS: TestAllGames/wadewar3.z5 (0.07s)
+    --- PASS: TestAllGames/warp.z5 (0.00s)
+    --- PASS: TestAllGames/wcastle.z5 (0.00s)
+    --- PASS: TestAllGames/weather.z5 (0.00s)
+    --- PASS: TestAllGames/wedding.z5 (0.00s)
+    --- PASS: TestAllGames/weirdness.z5 (0.00s)
+    --- PASS: TestAllGames/whispers.z5 (0.00s)
+    --- PASS: TestAllGames/winchest.z8 (0.02s)
+    --- PASS: TestAllGames/windhal1.z8 (0.00s)
+    --- PASS: TestAllGames/winter.z5 (0.00s)
+    --- PASS: TestAllGames/wireless.z5 (0.01s)
+    --- PASS: TestAllGames/woman.z8 (0.01s)
+    --- PASS: TestAllGames/wossname.z5 (0.02s)
+    --- PASS: TestAllGames/wump2ka.z5 (0.00s)
+    --- PASS: TestAllGames/wumpus.z5 (0.00s)
+    --- PASS: TestAllGames/wurm.z5 (0.00s)
+    --- PASS: TestAllGames/yagwad.z5 (0.00s)
+    --- PASS: TestAllGames/z-life.z5 (0.00s)
+    --- PASS: TestAllGames/zball.z5 (0.00s)
+    --- PASS: TestAllGames/zcamel.z5 (0.00s)
+    --- PASS: TestAllGames/zdungeon.z5 (0.01s)
+    --- PASS: TestAllGames/zegro.z8 (0.02s)
+    --- PASS: TestAllGames/zenon.z5 (0.00s)
+    --- PASS: TestAllGames/zfiles.z8 (0.00s)
+    --- PASS: TestAllGames/zombies.z5 (0.00s)
+    --- PASS: TestAllGames/zork_285.z5 (0.00s)
+    --- PASS: TestAllGames/zracer.z5 (0.00s)
+    --- PASS: TestAllGames/zsnake.z5 (0.00s)
+    --- PASS: TestAllGames/ztrek.z5 (0.00s)
+PASS
+ok  	github.com/davetcode/goz/zmachine	28.078s
