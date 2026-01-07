@@ -875,7 +875,8 @@ func (z *ZMachine) StepMachine() bool {
 				if len(prop.Data) == 2 {
 					value = binary.BigEndian.Uint16(prop.Data)
 				} else if len(prop.Data) > 2 {
-					return z.reportError("Can't get property with length > 2 using get_prop")
+					value = binary.BigEndian.Uint16(prop.Data[:2])
+					z.warnOnce("get_prop_prop_len", "Warning: @get_prop called with object %d property %d which has length %d (PC = %x); only first two bytes returned", objId, opcode.operands[1].Value(z), len(prop.Data), opcode.pc)
 				}
 
 				z.writeVariable(z.readIncPC(frame), value, false)
