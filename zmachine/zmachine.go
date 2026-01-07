@@ -1013,8 +1013,34 @@ func (z *ZMachine) StepMachine() bool {
 				z.writeVariable(z.readIncPC(frame), result, false)
 
 			case 0x04: // SET_FONT
-				opcode.operands[0].Value(z)
-				// TODO - Ignoring this for now to see impact on beyond zork
+				requestFont := Font(opcode.operands[0].Value(z))
+
+				// V6 has optional window parameter - we don't support multiple windows
+				if z.Core.Version == 6 && len(opcode.operands) > 1 {
+					window := int16(opcode.operands[1].Value(z))
+					if window != -3 && window != 0 {
+						z.warnOnce("set_font_v6_window", "Warning: SET_FONT with window %d not supported (only -3 and 0)", window)
+					}
+				}
+
+				previousFont := z.screenModel.CurrentFont
+				var result uint16
+
+				switch requestFont {
+				case 0:
+					// Font 0: return current font, don't change
+					result = uint16(previousFont)
+				case FontNormal, FontFixedPitch:
+					// Available fonts
+					z.screenModel.CurrentFont = requestFont
+					result = uint16(previousFont)
+				default:
+					// FontPicture, FontCharGraphs, and others: unavailable
+					result = 0
+				}
+
+				z.writeVariable(z.readIncPC(frame), result, false)
+				z.outputChannel <- z.screenModel
 
 			case 0x09: // SAVE_UNDO
 				z.saveUndo()

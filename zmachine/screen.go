@@ -22,9 +22,20 @@ func (c Color) ToHex() string {
 	return fmt.Sprintf("#%02x%02x%02x", c.r, c.g, c.b)
 }
 
+// Font represents the available Z-machine fonts
+type Font uint16
+
+const (
+	FontNormal     Font = 1
+	FontPicture    Font = 2
+	FontCharGraphs Font = 3
+	FontFixedPitch Font = 4
+)
+
 // ScreenModel - This is very deliberately a _not_ V6 screen model
 type ScreenModel struct {
 	LowerWindowActive bool
+	CurrentFont       Font // TODO - Not actually changing the rendering code based on this at the moment
 
 	UpperWindowHeight            int
 	UpperWindowForeground        Color
@@ -95,6 +106,7 @@ func (m *ScreenModel) NewZMachineColor(i uint16, isForeground bool) Color {
 func newScreenModel(foregroundColor Color, backgroundColor Color) ScreenModel {
 	return ScreenModel{
 		LowerWindowActive:            true,
+		CurrentFont:                  FontNormal,
 		UpperWindowHeight:            0,
 		DefaultUpperWindowForeground: foregroundColor,
 		DefaultUpperWindowBackground: backgroundColor,
