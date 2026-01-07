@@ -26,9 +26,9 @@ type Quit bool
 
 type Restart bool
 
-type RuntimeError struct {
-	Message string
-}
+type RuntimeError string
+
+type Warning string
 
 type EraseWindowRequest int
 
@@ -62,17 +62,19 @@ type Streams struct {
 }
 
 type ZMachine struct {
-	callStack        CallStack
-	Core             zcore.Core
-	dictionary       *dictionary.Dictionary
-	screenModel      ScreenModel
-	streams          Streams
-	rng              rand.Rand
-	Alphabets        *zstring.Alphabets
-	outputChannel    chan<- any
-	inputChannel     <-chan string
-	UndoStates       InMemorySaveStateCache
-	nextFramePointer uint16 // Used for catch/throw in V5+
+	callStack            CallStack
+	Core                 zcore.Core
+	dictionary           *dictionary.Dictionary
+	screenModel          ScreenModel
+	streams              Streams
+	rng                  rand.Rand
+	Alphabets            *zstring.Alphabets
+	outputChannel        chan<- any
+	inputChannel         <-chan string
+	UndoStates           InMemorySaveStateCache
+	nextFramePointer     uint16          // Used for catch/throw in V5+
+	issuedWarnings       map[string]bool // Track warnings to implement "will ignore further occurrences"
+	currentInstructionPC uint32          // PC of the current instruction (for warnings)
 }
 
 func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 {
@@ -159,9 +161,10 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 
 func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<- any) *ZMachine {
 	machine := ZMachine{
-		Core:          zcore.LoadCore(storyFile),
-		inputChannel:  inputChannel,
-		outputChannel: outputChannel,
+		Core:           zcore.LoadCore(storyFile),
+		inputChannel:   inputChannel,
+		outputChannel:  outputChannel,
+		issuedWarnings: make(map[string]bool),
 		streams: Streams{
 			Screen:        true,
 			Transcript:    false,
@@ -347,6 +350,12 @@ func (z *ZMachine) retValue(val uint16) {
 }
 
 func (z *ZMachine) RemoveObject(objId uint16) {
+	// Undefined behaviour in spec, but Frotz just warns and does nothing
+	if objId == 0 {
+		z.warnOnce("remove_obj", "Warning: @remove_obj called with object 0 (PC = %x)", z.currentInstructionPC)
+		return
+	}
+
 	object := zobject.GetObject(objId, &z.Core, z.Alphabets)
 	if object.Parent != 0 {
 		oldParent := zobject.GetObject(object.Parent, &z.Core, z.Alphabets)
@@ -380,6 +389,12 @@ func (z *ZMachine) RemoveObject(objId uint16) {
 }
 
 func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
+	// Undefined behaviour in spec, but Frotz just warns and does nothing
+	if objId == 0 {
+		z.warnOnce("insert_obj", "Warning: @insert_obj called with object 0 (PC = %x)", z.currentInstructionPC)
+		return
+	}
+
 	// If newParent is 0, just remove the object from the tree
 	if newParent == 0 {
 		z.RemoveObject(objId)
@@ -532,15 +547,38 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 // reportError sends an error to the output channel and returns false to stop execution
 func (z *ZMachine) reportError(format string, args ...any) bool {
-	z.outputChannel <- RuntimeError{Message: fmt.Sprintf(format, args...)}
+	z.outputChannel <- RuntimeError(fmt.Sprintf(format, args...))
 	return false
+}
+
+// warnOnce emits a warning to the output channel, but only once per warning key.
+// This matches Frotz behavior: "Warning: ... (will ignore further occurrences)"
+// The warningKey should be the opcode name (e.g., "test_attr")
+func (z *ZMachine) warnOnce(warningKey string, format string, args ...any) {
+	if z.issuedWarnings[warningKey] {
+		return
+	}
+	z.issuedWarnings[warningKey] = true
+	msg := fmt.Sprintf(format, args...)
+	z.outputChannel <- Warning(msg + " (will ignore further occurrences)")
 }
 
 func (z *ZMachine) Run() {
 	// Catch any remaining panics from helper functions and convert to RuntimeError
 	defer func() {
 		if r := recover(); r != nil {
-			z.outputChannel <- RuntimeError{Message: fmt.Sprintf("Internal error: %v", r)}
+			// Build debug context from PC history
+			var debugInfo strings.Builder
+			fmt.Fprintf(&debugInfo, "Internal error: %v\n", r)
+			debugInfo.WriteString("Recent opcode history (most recent last):\n")
+			for i := range 10 {
+				idx := (pcHistoryPtr - 10 + i + 100) % 100
+				op := pcHistory[idx]
+				if op.pc != 0 { // Skip uninitialized entries
+					fmt.Fprintf(&debugInfo, "  PC=0x%x opcode=0x%x operands=%v\n", op.pc, op.opcodeByte, op.operands)
+				}
+			}
+			z.outputChannel <- RuntimeError(debugInfo.String())
 			z.outputChannel <- Quit(true)
 		}
 	}()
@@ -562,11 +600,8 @@ var pcHistory = make([]Opcode, 100)
 var pcHistoryPtr = 0
 
 func (z *ZMachine) StepMachine() bool {
-	if z.callStack.peek().pc == 0xcc20 {
-		pcHistoryPtr = pcHistoryPtr + 1 - 1
-	}
-
 	opcode := ParseOpcode(z)
+	z.currentInstructionPC = opcode.pc
 	frame := z.callStack.peek()
 
 	pcHistory[pcHistoryPtr] = opcode
@@ -641,19 +676,31 @@ func (z *ZMachine) StepMachine() bool {
 			z.handleBranch(frame, opcode.operands[0].Value(z) == 0)
 
 		case 1: // GET_SIBLING
-			sibling := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets).Sibling
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_sibling", "Warning: @get_sibling called with object 0 (PC = %x)", opcode.pc)
+			}
+			sibling := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Sibling
 			z.writeVariable(z.readIncPC(frame), sibling, false)
 
 			z.handleBranch(frame, sibling != 0)
 
 		case 2: // GET_CHILD
-			child := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets).Child
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_child", "Warning: @get_child called with object 0 (PC = %x)", opcode.pc)
+			}
+			child := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Child
 			z.writeVariable(z.readIncPC(frame), child, false)
 
 			z.handleBranch(frame, child != 0)
 
 		case 3: // GET_PARENT
-			z.writeVariable(z.readIncPC(frame), zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets).Parent, false)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_parent", "Warning: @get_parent called with object 0 (PC = %x)", opcode.pc)
+			}
+			z.writeVariable(z.readIncPC(frame), zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Parent, false)
 
 		case 4: // GET_PROP_LEN
 			addr := opcode.operands[0].Value(z)
@@ -679,7 +726,11 @@ func (z *ZMachine) StepMachine() bool {
 			z.RemoveObject(opcode.operands[0].Value(z))
 
 		case 10: // PRINT_OBJ
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("print_obj", "Warning: @print_obj called with object 0 (PC = %x)", opcode.pc)
+			}
+			obj := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets)
 			z.appendText(obj.Name)
 
 		case 11: // RET
@@ -753,7 +804,11 @@ func (z *ZMachine) StepMachine() bool {
 			z.handleBranch(frame, branch)
 
 		case 6: // JIN
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("jin", "Warning: @jin called with object 0 (PC = %x)", opcode.pc)
+			}
+			obj := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets)
 			z.handleBranch(frame, obj.Parent == opcode.operands[1].Value(z))
 
 		case 7: // TEST
@@ -770,16 +825,30 @@ func (z *ZMachine) StepMachine() bool {
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z), false)
 
 		case 10: // TEST_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("test_attr", "Warning: @test_attr called with object 0 (PC = %x)", opcode.pc)
+			}
+			obj := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets)
 			z.handleBranch(frame, obj.TestAttribute(opcode.operands[1].Value(z)))
 
 		case 11: // SET_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-			obj.SetAttribute(opcode.operands[1].Value(z), &z.Core)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("set_attr", "Warning: @set_attr called with object 0 (PC = %x)", opcode.pc)
+			} else {
+				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+				obj.SetAttribute(opcode.operands[1].Value(z), &z.Core)
+			}
 
 		case 12: // CLEAR_ATTR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-			obj.ClearAttribute(opcode.operands[1].Value(z), &z.Core)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("clear_attr", "Warning: @clear_attr called with object 0 (PC = %x)", opcode.pc)
+			} else {
+				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+				obj.ClearAttribute(opcode.operands[1].Value(z), &z.Core)
+			}
 
 		case 13: // STORE
 			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z), true)
@@ -794,27 +863,45 @@ func (z *ZMachine) StepMachine() bool {
 			z.writeVariable(z.readIncPC(frame), uint16(z.Core.ReadByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))), false)
 
 		case 17: // GET_PROP
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_prop", "Warning: @get_prop called with object 0 (PC = %x)", opcode.pc)
+				z.writeVariable(z.readIncPC(frame), 0, false)
+			} else {
+				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+				prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
 
-			value := uint16(prop.Data[0])
-			if len(prop.Data) == 2 {
-				value = binary.BigEndian.Uint16(prop.Data)
-			} else if len(prop.Data) > 2 {
-				return z.reportError("Can't get property with length > 2 using get_prop")
+				value := uint16(prop.Data[0])
+				if len(prop.Data) == 2 {
+					value = binary.BigEndian.Uint16(prop.Data)
+				} else if len(prop.Data) > 2 {
+					return z.reportError("Can't get property with length > 2 using get_prop")
+				}
+
+				z.writeVariable(z.readIncPC(frame), value, false)
 			}
 
-			z.writeVariable(z.readIncPC(frame), value, false)
-
 		case 18: // GET_PROP_ADDR
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-			prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
-			z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_prop_addr", "Warning: @get_prop_addr called with object 0 (PC = %x)", opcode.pc)
+				z.writeVariable(z.readIncPC(frame), 0, false)
+			} else {
+				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+				prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
+				z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false)
+			}
 
 		case 19: // GET_NEXT_PROP
-			obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-			nextProp := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
-			z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
+			objId := opcode.operands[0].Value(z)
+			if objId == 0 {
+				z.warnOnce("get_next_prop", "Warning: @get_next_prop called with object 0 (PC = %x)", opcode.pc)
+				z.writeVariable(z.readIncPC(frame), 0, false)
+			} else {
+				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+				nextProp := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
+				z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
+			}
 
 		case 20: // ADD
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z), false)
@@ -1014,8 +1101,13 @@ func (z *ZMachine) StepMachine() bool {
 				z.Core.WriteByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
 			case 3: // PUT_PROP
-				obj := zobject.GetObject(opcode.operands[0].Value(z), &z.Core, z.Alphabets)
-				obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), &z.Core)
+				objId := opcode.operands[0].Value(z)
+				if objId == 0 {
+					z.warnOnce("put_prop", "Warning: @put_prop called with object 0 (PC = %x)", opcode.pc)
+				} else {
+					obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
+					obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), &z.Core)
+				}
 
 			case 4: // SREAD
 				z.read(&opcode)

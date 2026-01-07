@@ -28,6 +28,7 @@ type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
 type restartRequest bool
 type runtimeErrorMessage zmachine.RuntimeError
+type warningMessage zmachine.Warning
 
 type runningStoryState int
 
@@ -291,8 +292,13 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForInterpreter(m.outputChannel)
 
 	case runtimeErrorMessage:
-		m.runtimeError = msg.Message
+		m.runtimeError = string(msg)
 		return m, tea.Quit
+		
+	case warningMessage:
+		// Warnings are non-fatal - print to stderr and continue
+		fmt.Fprintf(os.Stderr, "%s\n", msg)
+		return m, waitForInterpreter(m.outputChannel)
 	}
 
 	if m.appState == appWaitingForInput {
@@ -430,8 +436,10 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 			return restartRequest(true)
 		case zmachine.RuntimeError:
 			return runtimeErrorMessage(msg)
+		case zmachine.Warning:
+			return warningMessage(msg)
 		default:
-			return runtimeErrorMessage(zmachine.RuntimeError{Message: "Invalid message type sent from interpreter"})
+			return runtimeErrorMessage(zmachine.RuntimeError("Invalid message type sent from interpreter"))
 		}
 	}
 }

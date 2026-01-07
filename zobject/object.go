@@ -1,6 +1,8 @@
 package zobject
 
 import (
+	"fmt"
+
 	"github.com/davetcode/goz/zcore"
 	"github.com/davetcode/goz/zstring"
 )
@@ -16,9 +18,32 @@ type Object struct {
 	PropertyPointer uint16
 }
 
+// NullObject represents object 0 (nothing). It is used when code needs to handle
+// object 0 gracefully instead of panicking.
+var NullObject = Object{
+	Id:              0,
+	Name:            "",
+	Attributes:      0,
+	Parent:          0,
+	Sibling:         0,
+	Child:           0,
+	PropertyPointer: 0,
+	BaseAddress:     0,
+}
+
+// GetObjectSafe returns NullObject for object 0 instead of panicking.
+// Use this when the calling opcode should handle object 0 gracefully.
+func GetObjectSafe(objId uint16, core *zcore.Core, alphabets *zstring.Alphabets) Object {
+	if objId == 0 {
+		return NullObject
+	}
+	return GetObject(objId, core, alphabets)
+}
+
 func GetObject(objId uint16, core *zcore.Core, alphabets *zstring.Alphabets) Object {
 	if objId == 0 {
-		panic("Can't get 0th object, it doesn't exist")
+		panic(fmt.Sprintf("Can't get 0th object, it doesn't exist (version=%d, objectTableBase=0x%x)", 
+			core.Version, core.ObjectTableBase))
 	}
 
 	if core.Version >= 4 {

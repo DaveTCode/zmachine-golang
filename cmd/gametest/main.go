@@ -236,7 +236,7 @@ func runGameTest(gamePath string) (result TestResult) {
 				collectOutput = false
 			case zmachine.RuntimeError:
 				result.Success = false
-				result.ErrorMessage = v.Message
+				result.ErrorMessage = string(v)
 				return
 			}
 		case <-timeout:
