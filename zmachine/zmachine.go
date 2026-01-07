@@ -26,6 +26,10 @@ type Quit bool
 
 type Restart bool
 
+type RuntimeError struct {
+	Message string
+}
+
 type EraseWindowRequest int
 
 type StateChangeRequest int
@@ -526,7 +530,21 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 }
 
+// reportError sends an error to the output channel and returns false to stop execution
+func (z *ZMachine) reportError(format string, args ...any) bool {
+	z.outputChannel <- RuntimeError{Message: fmt.Sprintf(format, args...)}
+	return false
+}
+
 func (z *ZMachine) Run() {
+	// Catch any remaining panics from helper functions and convert to RuntimeError
+	defer func() {
+		if r := recover(); r != nil {
+			z.outputChannel <- RuntimeError{Message: fmt.Sprintf("Internal error: %v", r)}
+			z.outputChannel <- Quit(true)
+		}
+	}()
+
 	// Initialise whatever is listening by sending inital versions of the screen model
 	z.outputChannel <- z.screenModel
 
@@ -614,7 +632,7 @@ func (z *ZMachine) StepMachine() bool {
 			z.handleBranch(frame, true) // Interpreters are asked to be gullible and to unconditionally branch
 
 		default:
-			panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+			return z.reportError("OP0 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
 		}
 
 	case OP1:
@@ -690,7 +708,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.call(&opcode, procedure)
 			}
 		default:
-			panic(fmt.Sprintf("Invalid 1OP opcode 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+			return z.reportError("OP1 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
 		}
 
 	case OP2:
@@ -783,7 +801,7 @@ func (z *ZMachine) StepMachine() bool {
 			if len(prop.Data) == 2 {
 				value = binary.BigEndian.Uint16(prop.Data)
 			} else if len(prop.Data) > 2 {
-				panic("Can't get property with length > 2 using get_prop")
+				return z.reportError("Can't get property with length > 2 using get_prop")
 			}
 
 			z.writeVariable(z.readIncPC(frame), value, false)
@@ -811,7 +829,7 @@ func (z *ZMachine) StepMachine() bool {
 			numerator := int16(opcode.operands[0].Value(z))
 			denominator := int16(opcode.operands[1].Value(z))
 			if denominator == 0 {
-				panic("Invalid div by zero operation")
+				return z.reportError("Division by zero")
 			}
 			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator), false)
 
@@ -819,27 +837,27 @@ func (z *ZMachine) StepMachine() bool {
 			numerator := int16(opcode.operands[0].Value(z))
 			denominator := int16(opcode.operands[1].Value(z))
 			if denominator == 0 {
-				panic("Invalid mod by zero operation")
+				return z.reportError("Modulo by zero")
 			}
 			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator), false)
 
 		case 25: // call_2s
 			if z.Core.Version < 4 {
-				panic("Invalid call_2s routine on v1-3")
+				return z.reportError("call_2s not available on v1-3")
 			}
 
 			z.call(&opcode, function)
 
 		case 26: // CALL_2n
 			if z.Core.Version < 5 {
-				panic("Invalid call_2s routine on v1-4")
+				return z.reportError("call_2n not available on v1-4")
 			}
 
 			z.call(&opcode, procedure)
 
 		case 27: // set_colour
 			if z.Core.Version < 5 {
-				panic("Invalid set_colour routine on v1-4")
+				return z.reportError("set_colour not available on v1-4")
 			}
 
 			foreground := z.screenModel.NewZMachineColor(opcode.operands[0].Value(z), true)
@@ -855,7 +873,7 @@ func (z *ZMachine) StepMachine() bool {
 
 		case 28: // throw
 			if z.Core.Version < 5 {
-				panic("Invalid throw routine on v1-4")
+				return z.reportError("throw not available on v1-4")
 			}
 			returnValue := opcode.operands[0].Value(z)
 			fp := uint32(opcode.operands[1].Value(z))
@@ -869,19 +887,19 @@ func (z *ZMachine) StepMachine() bool {
 			z.retValue(returnValue)
 
 		case 0, 29, 30, 31: // blank
-			panic(fmt.Sprintf("Unused 2OP opcode number: %x", opcode.opcodeNumber))
+			return z.reportError("Unused 2OP opcode number: 0x%x", opcode.opcodeNumber)
 
 		default:
-			panic("Invalid state, interpreter bug")
+			return z.reportError("Invalid 2OP state, interpreter bug")
 		}
 
 	case VAR:
 		if opcode.opcodeForm == extForm {
 			switch opcode.opcodeByte {
 			case 0x00:
-				panic("Save not implemented")
+				return z.reportError("EXT save not implemented")
 			case 0x01:
-				panic("Restore not implemented")
+				return z.reportError("EXT restore not implemented")
 			case 0x02: // LOG_SHIFT
 				num := opcode.operands[0].Value(z)
 				places := int16(opcode.operands[1].Value(z))
@@ -979,7 +997,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.outputChannel <- z.screenModel
 
 			default:
-				panic(fmt.Sprintf("EXT Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+				return z.reportError("EXT opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
 			}
 		} else {
 			switch opcode.opcodeNumber {
@@ -1034,7 +1052,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 10: // SPLIT_WINDOW
 				if z.Core.Version < 3 {
-					panic("Can't call SPLIT_WINDOW on pre v3 z-machine")
+					return z.reportError("SPLIT_WINDOW not available on v1-2")
 				}
 
 				lines := opcode.operands[0].Value(z)
@@ -1044,7 +1062,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 11: // SET_WINDOW
 				if z.Core.Version < 3 {
-					panic("Can't call SET_WINDOW on pre v3 z-machine")
+					return z.reportError("SET_WINDOW not available on v1-2")
 				}
 				window := opcode.operands[0].Value(z)
 				z.screenModel.LowerWindowActive = window == 0
@@ -1092,7 +1110,7 @@ func (z *ZMachine) StepMachine() bool {
 				col := opcode.operands[1].Value(z)
 
 				if z.Core.Version == 6 {
-					panic("Cursors are more complex on v6")
+					return z.reportError("V6 cursor operations not implemented")
 				}
 
 				// TODO - Pretty sure you can't set the cursor on lower window v<=5
@@ -1105,7 +1123,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 16: // GET_CURSOR
 				if z.Core.Version == 6 {
-					panic("Cursors are more complex on v6")
+					return z.reportError("V6 cursor operations not implemented")
 				}
 
 				array := uint32(opcode.operands[0].Value(z))
@@ -1126,7 +1144,7 @@ func (z *ZMachine) StepMachine() bool {
 
 					z.outputChannel <- z.screenModel
 				} else {
-					panic("Can't set text style on version <=4")
+					return z.reportError("SET_TEXT_STYLE not available on v1-3")
 				}
 
 			case 18: // BUFFER_MODE
@@ -1212,7 +1230,7 @@ func (z *ZMachine) StepMachine() bool {
 					if len(opcode.operands) == 4 {
 						flag = opcode.operands[3].Value(z) != 0
 
-						panic("TODO - Haven't really implemented this yet so crash if a story actually uses it")
+						return z.reportError("TOKENISE with 4th operand not implemented")
 					}
 				}
 
@@ -1243,7 +1261,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.handleBranch(frame, branch)
 
 			default:
-				panic(fmt.Sprintf("Opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc))
+				return z.reportError("VAR opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
 			}
 		}
 	}

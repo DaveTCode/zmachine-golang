@@ -27,6 +27,7 @@ type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
 type restartRequest bool
+type runtimeErrorMessage zmachine.RuntimeError
 
 type runningStoryState int
 
@@ -55,6 +56,7 @@ type runStoryModel struct {
 	statusBarStyle           lipgloss.Style
 	upperWindowStyleCurrent  lipgloss.Style
 	lowerWindowStyle         lipgloss.Style
+	runtimeError             string
 }
 
 func (m runStoryModel) Init() tea.Cmd {
@@ -282,10 +284,15 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.upperWindowStyle[row] = slices.Repeat([]lipgloss.Style{baseAppStyle}, m.width)
 			}
 		default:
-			panic("TODO Why are we clearing windows > 1? Needs better error handling but possibly indicates an interpreter bug so panicing for now")
+			m.runtimeError = fmt.Sprintf("Unexpected erase_window value: %d", int(msg))
+			return m, tea.Quit
 		}
 
 		return m, waitForInterpreter(m.outputChannel)
+
+	case runtimeErrorMessage:
+		m.runtimeError = msg.Message
+		return m, tea.Quit
 	}
 
 	if m.appState == appWaitingForInput {
@@ -328,6 +335,16 @@ func createStatusLine(width int, placeName string, scoreOrHours int, movesOrMinu
 }
 
 func (m runStoryModel) View() string {
+	// If there was a runtime error, display it
+	if m.runtimeError != "" {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")).
+			Bold(true)
+		return fmt.Sprintf("\n%s\n\n%s\n",
+			errorStyle.Render("Z-Machine Error:"),
+			m.runtimeError)
+	}
+
 	// Wait until the screen has loaded properly to print anything
 	if m.width == 0 || m.height == 0 {
 		return "Initializing..."
@@ -413,8 +430,10 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 			return tea.Quit()
 		case zmachine.Restart:
 			return restartRequest(true)
+		case zmachine.RuntimeError:
+			return runtimeErrorMessage(msg)
 		default:
-			panic("Invalid message type sent from interpreter")
+			return runtimeErrorMessage(zmachine.RuntimeError{Message: "Invalid message type sent from interpreter"})
 		}
 	}
 }
