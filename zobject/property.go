@@ -54,7 +54,7 @@ func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) e
 			case 2:
 				core.WriteHalfWord(currentPtr+1, value)
 			default:
-				return fmt.Errorf("property %d on object %d has invalid length %d for set operation", propertyId, o.Id, property.Length)
+				return fmt.Errorf("property %d on object %d has length %d (must be 1 or 2 for set operation)", propertyId, o.Id, property.Length)
 			}
 
 			return nil

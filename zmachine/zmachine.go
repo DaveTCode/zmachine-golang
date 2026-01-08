@@ -102,8 +102,12 @@ func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 
 	case z.Core.Version == 8:
 		return 8 * originalAddress
 	default:
+		// Invalid/unsupported version detected. This should never happen in practice as LoadCore
+		// would validate the version, but we handle it gracefully. Default to v1-3 behavior as
+		// it's the simplest packed address calculation and gives the best chance of some output
+		// rather than crashing immediately.
 		z.warnOnce("invalid_version", "Warning: Invalid ROM version %d (PC = %x)", z.Core.Version, z.currentInstructionPC)
-		return 2 * originalAddress // Default to v1-3 behavior
+		return 2 * originalAddress
 	}
 }
 
