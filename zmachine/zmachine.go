@@ -123,58 +123,65 @@ func (z *ZMachine) ReadHalfWordIncPC(frame *CallStackFrame) uint16 {
 	return v
 }
 
-func (z *ZMachine) readVariable(variable uint8, indirect bool) uint16 {
-	currentCallFrame := z.callStack.peek()
+func (z *ZMachine) readVariable(variable uint8, indirect bool) (uint16, error) {
+	currentCallFrame, err := z.callStack.peek()
+	if err != nil {
+		return 0, err
+	}
 
 	switch {
 	case variable == 0: // Magic stack variable
 		if len(currentCallFrame.routineStack) == 0 {
 			z.warnOnce("stack_underflow", "Warning: Attempt to read from empty routine stack (PC = %x)", z.currentInstructionPC)
-			return 0
+			return 0, nil
 		}
 
 		// "In the seven opcodes that take indirect variable references (inc, dec, inc_chk, dec_chk, load, store, pull),
 		// an indirect reference to the stack pointer does not push or pull the top item of the stack -
 		// it is read or written in place." - Verified with praxix tests
 		if indirect {
-			return currentCallFrame.peek()
+			return currentCallFrame.peek(z), nil
 		} else {
-			return currentCallFrame.pop()
+			return currentCallFrame.pop(z), nil
 		}
 	case variable < 16: // Routine local variables
 
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
 			z.warnOnce("invalid_local_var_read", "Warning: Attempt to read non-existing local variable %d (PC = %x)", variable, z.currentInstructionPC)
-			return 0
+			return 0, nil
 		}
 
-		return currentCallFrame.locals[variable-1]
+		return currentCallFrame.locals[variable-1], nil
 	default: // Global variables
-		return z.Core.ReadHalfWord(uint32(z.Core.GlobalVariableBase + 2*(uint16(variable)-16)))
+		return z.Core.ReadHalfWord(uint32(z.Core.GlobalVariableBase + 2*(uint16(variable)-16))), nil
 	}
 }
 
-func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
-	currentCallFrame := z.callStack.peek()
+func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) error {
+	currentCallFrame, err := z.callStack.peek()
+	if err != nil {
+		return err
+	}
 
 	switch {
 	case variable == 0: // Magic stack variable
 		// Indirect writes happen in place at the top of the stack
 		if indirect {
-			_ = currentCallFrame.pop()
+			_ = currentCallFrame.pop(z)
 		}
 
 		currentCallFrame.push(value)
 	case variable < 16: // Routine local variables
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
 			z.warnOnce("invalid_local_var_write", "Warning: Attempt to write non-existing local variable %d (PC = %x)", variable, z.currentInstructionPC)
-			return
+			return nil
 		}
 
 		currentCallFrame.locals[variable-1] = value
 	default: // Global variables
 		z.Core.WriteHalfWord(uint32(z.Core.GlobalVariableBase+2*(uint16(variable)-16)), value)
 	}
+	return nil
 }
 
 func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<- any) *ZMachine {
@@ -226,7 +233,12 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 	// Special case, if routine address is 0 then no call is made and 0 is stored in the return address
 	if routineAddress == 0 {
 		if routineType == function {
-			z.writeVariable(z.readIncPC(z.callStack.peek()), 0, false)
+			frame, err := z.callStack.peek()
+			if err != nil {
+				z.reportError("CallRoutine: %v", err)
+				return
+			}
+			z.writeVariable(z.readIncPC(frame), 0, false)
 		}
 
 		return
@@ -263,7 +275,7 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 	})
 }
 
-func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
+func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) bool {
 	branchArg1 := z.readIncPC(frame)
 
 	branchReversed := (branchArg1>>7)&1 == 0
@@ -277,14 +289,19 @@ func (z *ZMachine) handleBranch(frame *CallStackFrame, result bool) {
 	if result != branchReversed {
 		switch offset {
 		case 0:
-			z.retValue(0)
+			if err := z.retValue(0); err != nil {
+				return z.reportError("handleBranch: %v", err)
+			}
 		case 1:
-			z.retValue(1)
+			if err := z.retValue(1); err != nil {
+				return z.reportError("handleBranch: %v", err)
+			}
 		default:
 			destination := uint32(int32(frame.pc) + offset - 2)
 			frame.pc = destination
 		}
 	}
+	return true
 }
 
 type word struct {
@@ -359,14 +376,21 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 	}
 }
 
-func (z *ZMachine) retValue(val uint16) {
-	oldFrame := z.callStack.pop()
-	newFrame := z.callStack.peek()
+func (z *ZMachine) retValue(val uint16) error {
+	oldFrame, err := z.callStack.pop()
+	if err != nil {
+		return fmt.Errorf("retValue: %w", err)
+	}
+	newFrame, err := z.callStack.peek()
+	if err != nil {
+		return fmt.Errorf("retValue: %w", err)
+	}
 
 	if oldFrame.routineType == function {
 		destination := z.readIncPC(newFrame)
 		z.writeVariable(destination, val, false)
 	}
+	return nil
 }
 
 func (z *ZMachine) RemoveObject(objId uint16) {
@@ -482,11 +506,14 @@ func (z *ZMachine) appendText(s string) {
 
 func (z *ZMachine) read(opcode *Opcode) {
 	if z.Core.Version <= 3 { // TODO - Not really sure if this is true
-		currentLocation := zobject.GetObject(z.readVariable(16, false), &z.Core, z.Alphabets)
+		locationVar, _ := z.readVariable(16, false)
+		scoreVar, _ := z.readVariable(17, false)
+		movesVar, _ := z.readVariable(18, false)
+		currentLocation := zobject.GetObject(locationVar, &z.Core, z.Alphabets)
 		z.outputChannel <- StatusBar{
 			PlaceName:   currentLocation.Name,
-			Score:       int(z.readVariable(17, false)),
-			Moves:       int(z.readVariable(18, false)),
+			Score:       int(scoreVar),
+			Moves:       int(movesVar),
 			IsTimeBased: z.Core.StatusBarTimeBased,
 		}
 	}
@@ -562,7 +589,12 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 
 	if z.Core.Version >= 5 {
-		z.writeVariable(z.readIncPC(z.callStack.peek()), 13, false) // TODO - Should be the typed terminating char
+		frame, err := z.callStack.peek()
+		if err != nil {
+			z.reportError("READ: %v", err)
+			return
+		}
+		z.writeVariable(z.readIncPC(frame), 13, false) // TODO - Should be the typed terminating char
 	}
 }
 
@@ -621,9 +653,15 @@ var pcHistory = make([]Opcode, 100)
 var pcHistoryPtr = 0
 
 func (z *ZMachine) StepMachine() bool {
-	opcode := ParseOpcode(z)
+	opcode, err := ParseOpcode(z)
+	if err != nil {
+		return z.reportError("ParseOpcode: %v", err)
+	}
 	z.currentInstructionPC = opcode.pc
-	frame := z.callStack.peek()
+	frame, err := z.callStack.peek()
+	if err != nil {
+		return z.reportError("StepMachine: %v", err)
+	}
 
 	pcHistory[pcHistoryPtr] = opcode
 	pcHistoryPtr = (pcHistoryPtr + 1) % 100
@@ -632,10 +670,14 @@ func (z *ZMachine) StepMachine() bool {
 	case OP0:
 		switch opcode.opcodeNumber {
 		case 0: // RTRUE
-			z.retValue(1)
+			if err := z.retValue(1); err != nil {
+				return z.reportError("RTRUE: %v", err)
+			}
 
 		case 1: // RFALSE
-			z.retValue(0)
+			if err := z.retValue(0); err != nil {
+				return z.reportError("RFALSE: %v", err)
+			}
 
 		case 2: // PRINT
 			text, bytesRead := zstring.Decode(frame.pc, z.Core.MemoryLength(), &z.Core, z.Alphabets, false)
@@ -647,7 +689,9 @@ func (z *ZMachine) StepMachine() bool {
 			frame.pc += bytesRead
 			z.appendText(text)
 			z.appendText("\n")
-			z.retValue(1)
+			if err := z.retValue(1); err != nil {
+				return z.reportError("PRINT_RET: %v", err)
+			}
 
 		case 4: // NOP
 			// Do nothing
@@ -657,12 +701,14 @@ func (z *ZMachine) StepMachine() bool {
 			return false
 
 		case 8: // RET_POPPED
-			v := frame.popWithWarning(z)
-			z.retValue(v)
+			v := frame.pop(z)
+			if err := z.retValue(v); err != nil {
+				return z.reportError("RET_POPPED: %v", err)
+			}
 
 		case 9: // POP (v1-4) / CATCH (v5+)
 			if z.Core.Version <= 4 {
-				frame.popWithWarning(z)
+				frame.pop(z)
 			} else {
 				// Tag the current frame with a unique frame pointer and store it
 				z.nextFramePointer++
@@ -685,19 +731,25 @@ func (z *ZMachine) StepMachine() bool {
 				actualChecksum += uint16(z.Core.ReadByte(ix))
 			}
 
-			z.handleBranch(frame, checksum == actualChecksum || true) // TODO - Verify doesn't really work but also not clear why we'd ever want to fail a verify test
+			if !z.handleBranch(frame, checksum == actualChecksum || true) { // TODO - Verify doesn't really work but also not clear why we'd ever want to fail a verify test
+				return false
+			}
 
 		case 15: // PIRACY
-			z.handleBranch(frame, true) // Interpreters are asked to be gullible and to unconditionally branch
+			if !z.handleBranch(frame, true) { // Interpreters are asked to be gullible and to unconditionally branch
+				return false
+			}
 
 		default:
-			return z.reportError("OP0 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
+			return z.reportError("OP0 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, opcode.pc)
 		}
 
 	case OP1:
 		switch opcode.opcodeNumber {
 		case 0: // JZ
-			z.handleBranch(frame, opcode.operands[0].Value(z) == 0)
+			if !z.handleBranch(frame, opcode.operands[0].Value(z) == 0) {
+				return false
+			}
 
 		case 1: // GET_SIBLING
 			objId := opcode.operands[0].Value(z)
@@ -707,7 +759,9 @@ func (z *ZMachine) StepMachine() bool {
 			sibling := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Sibling
 			z.writeVariable(z.readIncPC(frame), sibling, false)
 
-			z.handleBranch(frame, sibling != 0)
+			if !z.handleBranch(frame, sibling != 0) {
+				return false
+			}
 
 		case 2: // GET_CHILD
 			objId := opcode.operands[0].Value(z)
@@ -717,7 +771,9 @@ func (z *ZMachine) StepMachine() bool {
 			child := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Child
 			z.writeVariable(z.readIncPC(frame), child, false)
 
-			z.handleBranch(frame, child != 0)
+			if !z.handleBranch(frame, child != 0) {
+				return false
+			}
 
 		case 3: // GET_PARENT
 			objId := opcode.operands[0].Value(z)
@@ -732,11 +788,13 @@ func (z *ZMachine) StepMachine() bool {
 
 		case 5: // INC
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable, true)+1, true)
+			val, _ := z.readVariable(variable, true)
+			z.writeVariable(variable, val+1, true)
 
 		case 6: // DEC
 			variable := uint8(opcode.operands[0].Value(z))
-			z.writeVariable(variable, z.readVariable(variable, true)-1, true)
+			val, _ := z.readVariable(variable, true)
+			z.writeVariable(variable, val-1, true)
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
@@ -759,7 +817,9 @@ func (z *ZMachine) StepMachine() bool {
 
 		case 11: // RET
 			v := opcode.operands[0].Value(z)
-			z.retValue(v)
+			if err := z.retValue(v); err != nil {
+				return z.reportError("RET: %v", err)
+			}
 
 		case 12: // JUMP
 			offset := int16(opcode.operands[0].Value(z))
@@ -773,7 +833,8 @@ func (z *ZMachine) StepMachine() bool {
 
 		case 14: // LOAD
 			value := opcode.operands[0].Value(z)
-			z.writeVariable(z.readIncPC(frame), z.readVariable(uint8(value), true), false)
+			val, _ := z.readVariable(uint8(value), true)
+			z.writeVariable(z.readIncPC(frame), val, false)
 
 		case 15: // NOT or CALL_1n
 			if z.Core.Version < 5 {
@@ -783,7 +844,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.call(&opcode, procedure)
 			}
 		default:
-			return z.reportError("OP1 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
+			return z.reportError("OP1 opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, opcode.pc)
 		}
 
 	case OP2:
@@ -797,35 +858,47 @@ func (z *ZMachine) StepMachine() bool {
 				}
 			}
 
-			z.handleBranch(frame, branch)
+			if !z.handleBranch(frame, branch) {
+				return false
+			}
 
 		case 2: // JL
 			a := int16(opcode.operands[0].Value(z))
 			b := int16(opcode.operands[1].Value(z))
 
-			z.handleBranch(frame, a < b)
+			if !z.handleBranch(frame, a < b) {
+				return false
+			}
 
 		case 3: // JG
 			a := int16(opcode.operands[0].Value(z))
 			b := int16(opcode.operands[1].Value(z))
 
-			z.handleBranch(frame, a > b)
+			if !z.handleBranch(frame, a > b) {
+				return false
+			}
 
 		case 4: // DEC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
-			newValue := int16(z.readVariable(variable, true)) - 1
+			val, _ := z.readVariable(variable, true)
+			newValue := int16(val) - 1
 			z.writeVariable(variable, uint16(newValue), true)
 			branch := int16(newValue) < int16(opcode.operands[1].Value(z))
 
-			z.handleBranch(frame, branch)
+			if !z.handleBranch(frame, branch) {
+				return false
+			}
 
 		case 5: // INC_CHK
 			variable := uint8(opcode.operands[0].Value(z))
-			newValue := z.readVariable(variable, true) + 1
+			val, _ := z.readVariable(variable, true)
+			newValue := val + 1
 			z.writeVariable(variable, newValue, true)
 			branch := int16(newValue) > int16(opcode.operands[1].Value(z))
 
-			z.handleBranch(frame, branch)
+			if !z.handleBranch(frame, branch) {
+				return false
+			}
 
 		case 6: // JIN
 			objId := opcode.operands[0].Value(z)
@@ -833,14 +906,18 @@ func (z *ZMachine) StepMachine() bool {
 				z.warnOnce("jin", "Warning: @jin called with object 0 (PC = %x)", opcode.pc)
 			}
 			obj := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets)
-			z.handleBranch(frame, obj.Parent == opcode.operands[1].Value(z))
+			if !z.handleBranch(frame, obj.Parent == opcode.operands[1].Value(z)) {
+				return false
+			}
 
 		case 7: // TEST
 			bitmap := opcode.operands[0].Value(z)
 			flags := opcode.operands[1].Value(z)
 
 			branch := bitmap&flags == flags
-			z.handleBranch(frame, branch)
+			if !z.handleBranch(frame, branch) {
+				return false
+			}
 
 		case 8: // OR
 			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)|opcode.operands[1].Value(z), false)
@@ -854,7 +931,9 @@ func (z *ZMachine) StepMachine() bool {
 				z.warnOnce("test_attr", "Warning: @test_attr called with object 0 (PC = %x)", opcode.pc)
 			}
 			obj := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets)
-			z.handleBranch(frame, obj.TestAttribute(opcode.operands[1].Value(z)))
+			if !z.handleBranch(frame, obj.TestAttribute(opcode.operands[1].Value(z))) {
+				return false
+			}
 
 		case 11: // SET_ATTR
 			objId := opcode.operands[0].Value(z)
@@ -996,12 +1075,23 @@ func (z *ZMachine) StepMachine() bool {
 			fp := uint32(opcode.operands[1].Value(z))
 
 			// Pop frames until we find the one with the matching frame pointer
-			for z.callStack.peek().framePointer != fp {
-				z.callStack.pop()
+			for {
+				frame, err := z.callStack.peek()
+				if err != nil {
+					return z.reportError("THROW: %v", err)
+				}
+				if frame.framePointer == fp {
+					break
+				}
+				if _, err := z.callStack.pop(); err != nil {
+					return z.reportError("THROW: %v", err)
+				}
 			}
 
 			// Return with the given value from the found frame
-			z.retValue(returnValue)
+			if err := z.retValue(returnValue); err != nil {
+				return z.reportError("THROW: %v", err)
+			}
 
 		case 0, 29, 30, 31: // blank
 			return z.reportError("Unused 2OP opcode number: 0x%x", opcode.opcodeNumber)
@@ -1078,7 +1168,11 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 0x0a: // RESTORE_UNDO
 				response := z.restoreUndo()
-				frame = z.callStack.peek()
+				var err error
+				frame, err = z.callStack.peek()
+				if err != nil {
+					return z.reportError("RESTORE_UNDO: %v", err)
+				}
 				z.writeVariable(z.readIncPC(frame), response, false) // Restore always says that it's done and continues from previous save
 
 			case 0x0b: // PRINT_UNICODE
@@ -1140,7 +1234,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.outputChannel <- z.screenModel
 
 			default:
-				return z.reportError("EXT opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
+				return z.reportError("EXT opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, opcode.pc)
 			}
 		} else {
 			switch opcode.opcodeNumber {
@@ -1203,10 +1297,10 @@ func (z *ZMachine) StepMachine() bool {
 					if opcode.numOperands > 0 {
 						return z.reportError("V6 PULL with user stack not implemented")
 					}
-					value := frame.popWithWarning(z)
+					value := frame.pop(z)
 					z.writeVariable(z.readIncPC(frame), value, false)
 				} else {
-					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.popWithWarning(z), true)
+					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(z), true)
 				}
 
 			case 10: // SPLIT_WINDOW
@@ -1415,7 +1509,9 @@ func (z *ZMachine) StepMachine() bool {
 
 				z.writeVariable(z.readIncPC(frame), uint16(result), false)
 
-				z.handleBranch(frame, result != 0)
+				if !z.handleBranch(frame, result != 0) {
+					return false
+				}
 
 			case 24: // NOT
 				val := opcode.operands[0].Value(z)
@@ -1470,10 +1566,12 @@ func (z *ZMachine) StepMachine() bool {
 				arg := opcode.operands[0].Value(z)
 				branch := arg <= uint16(frame.numValuesPassed)
 
-				z.handleBranch(frame, branch)
+				if !z.handleBranch(frame, branch) {
+					return false
+				}
 
 			default:
-				return z.reportError("VAR opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, z.callStack.peek().pc)
+				return z.reportError("VAR opcode not implemented 0x%x at 0x%x", opcode.opcodeByte, opcode.pc)
 			}
 		}
 	}

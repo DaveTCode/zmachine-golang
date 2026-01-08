@@ -1,5 +1,7 @@
 package zmachine
 
+import "fmt"
+
 type CallStackFrame struct {
 	pc              uint32   // TODO - What is the usual limit to this number?
 	routineStack    []uint16 // TODO - Really a stack, check how it's used to see if we care
@@ -13,9 +15,7 @@ func (f *CallStackFrame) push(i uint16) {
 	f.routineStack = append(f.routineStack, i)
 }
 
-// popWithWarning pops a value from the routine stack with bounds checking.
-// If the stack is empty, warns and returns 0.
-func (f *CallStackFrame) popWithWarning(z *ZMachine) uint16 {
+func (f *CallStackFrame) pop(z *ZMachine) uint16 {
 	if len(f.routineStack) == 0 {
 		z.warnOnce("stack_underflow_pop", "Warning: Attempt to pop from empty routine stack (PC = %x)", z.currentInstructionPC)
 		return 0
@@ -25,35 +25,9 @@ func (f *CallStackFrame) popWithWarning(z *ZMachine) uint16 {
 	return i
 }
 
-// pop pops a value from the routine stack with silent bounds checking.
-// Returns 0 if stack is empty without warning.
-// Use popWithWarning instead for opcode implementations.
-// This method exists for backward compatibility with readVariable which has its own warning.
-func (f *CallStackFrame) pop() uint16 {
+func (f *CallStackFrame) peek(z *ZMachine) uint16 {
 	if len(f.routineStack) == 0 {
-		return 0
-	}
-	i := f.routineStack[len(f.routineStack)-1]
-	f.routineStack = f.routineStack[:len(f.routineStack)-1]
-	return i
-}
-
-// peekWithWarning peeks at the top value of the routine stack with bounds checking.
-// If the stack is empty, warns and returns 0.
-func (f *CallStackFrame) peekWithWarning(z *ZMachine) uint16 {
-	if len(f.routineStack) == 0 {
-		z.warnOnce("stack_underflow_peek", "Warning: Attempt to peek empty routine stack (PC = %x)", z.currentInstructionPC)
-		return 0
-	}
-	return f.routineStack[len(f.routineStack)-1]
-}
-
-// peek peeks at the top value of the routine stack with silent bounds checking.
-// Returns 0 if stack is empty without warning.
-// Use peekWithWarning instead for opcode implementations.
-// This method exists for backward compatibility with readVariable which has its own warning.
-func (f *CallStackFrame) peek() uint16 {
-	if len(f.routineStack) == 0 {
+		z.warnOnce("stack_underflow_peek", "Warning: Attempt to peek from empty routine stack (PC = %x)", z.currentInstructionPC)
 		return 0
 	}
 	return f.routineStack[len(f.routineStack)-1]
@@ -67,16 +41,22 @@ func (s *CallStack) push(frame CallStackFrame) {
 	s.frames = append(s.frames, frame)
 }
 
-func (s *CallStack) pop() CallStackFrame {
+func (s *CallStack) pop() (CallStackFrame, error) {
+	if len(s.frames) == 0 {
+		return CallStackFrame{}, fmt.Errorf("attempt to pop from empty call stack")
+	}
 	stackSize := len(s.frames)
 	frame := s.frames[stackSize-1]
 	s.frames = s.frames[:stackSize-1]
 
-	return frame
+	return frame, nil
 }
 
-func (s *CallStack) peek() *CallStackFrame {
-	return &s.frames[len(s.frames)-1]
+func (s *CallStack) peek() (*CallStackFrame, error) {
+	if len(s.frames) == 0 {
+		return nil, fmt.Errorf("attempt to peek empty call stack")
+	}
+	return &s.frames[len(s.frames)-1], nil
 }
 
 // CallStack - Deep copy of a call stack and all frames
