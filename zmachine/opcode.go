@@ -36,7 +36,8 @@ func (operand *Operand) Value(z *ZMachine) uint16 {
 	case largeConstant, smallConstant:
 		return operand.value
 	case variable:
-		return z.readVariable(uint8(operand.value), false)
+		val, _ := z.readVariable(uint8(operand.value), false)
+		return val
 	default:
 		return 0
 	}
@@ -85,8 +86,11 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 	}
 }
 
-func ParseOpcode(z *ZMachine) Opcode {
-	frame := z.callStack.peek()
+func ParseOpcode(z *ZMachine) (Opcode, error) {
+	frame, err := z.callStack.peek()
+	if err != nil {
+		return Opcode{}, err
+	}
 	opcode := Opcode{
 		pc: frame.pc,
 	}
@@ -146,5 +150,5 @@ func ParseOpcode(z *ZMachine) Opcode {
 		opcode.numOperands = 2
 	}
 
-	return opcode
+	return opcode, nil
 }

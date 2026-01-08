@@ -228,7 +228,7 @@ func Decode(startPtr uint32, endPtr uint32, core *zcore.Core, alphabets *Alphabe
 	bytesRead := uint32(0)
 	ptr := startPtr
 	baseAlphabet := a0
-	currentAlphabet := a0
+	var currentAlphabet Alphabet
 	nextAlphabet := a0
 
 	var zchrStream []uint8

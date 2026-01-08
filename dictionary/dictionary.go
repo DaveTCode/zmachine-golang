@@ -28,12 +28,12 @@ type Dictionary struct {
 
 func ParseDictionary(baseAddress uint32, core *zcore.Core, alphabets *zstring.Alphabets) *Dictionary {
 	dictionaryPtr := baseAddress
-	numInputCodes := core.ReadByte(dictionaryPtr)
+	numInputCodes := core.ReadZByte(dictionaryPtr)
 
 	header := Header{
 		n:          numInputCodes,
 		InputCodes: core.ReadSlice(dictionaryPtr+1, dictionaryPtr+uint32(numInputCodes)+1),
-		length:     core.ReadByte((dictionaryPtr + 1 + uint32(numInputCodes))),
+		length:     core.ReadZByte((dictionaryPtr + 1 + uint32(numInputCodes))),
 		count:      int16(core.ReadHalfWord(dictionaryPtr + 2 + uint32(numInputCodes))),
 	}
 

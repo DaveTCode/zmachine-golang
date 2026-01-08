@@ -135,7 +135,7 @@ func (core *Core) SetDefaultForegroundColorNumber(color uint8) {
 	core.DefaultForegroundColorNumber = color
 }
 
-func (core *Core) ReadByte(address uint32) uint8 {
+func (core *Core) ReadZByte(address uint32) uint8 {
 	return core.bytes[address]
 }
 
@@ -151,7 +151,7 @@ func (core *Core) ReadSlice(startAddress uint32, endAddress uint32) []uint8 {
 	return core.bytes[startAddress:endAddress]
 }
 
-func (core *Core) WriteByte(address uint32, value uint8) {
+func (core *Core) WriteZByte(address uint32, value uint8) {
 	// TODO - Lots of the memory is read only, need to add validation here
 	core.bytes[address] = value
 }

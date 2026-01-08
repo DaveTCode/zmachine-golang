@@ -5,20 +5,7 @@ Found 466 games to test
 [4/466] ✓ AOTYRZ.z5
 [5/466] ✓ Acheton.z8
 [6/466] ✓ Advent.z5
-[7/466] ✗ Advent_Crowther.z8
-        Error: Internal error: Attempt to read from empty routine stack
-Recent opcode history (most recent last):
-  PC=0x25e90 opcode=0xb0 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x26019 opcode=0xda operands=[{0 19581} {2 1} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x263e9 opcode=0xcf operands=[{0 34606} {2 1} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x263ef opcode=0xa0 operands=[{2 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x263f2 opcode=0xb0 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x2601e opcode=0xab operands=[{2 3} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x26752 opcode=0xe9 operands=[{1 33} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x26755 opcode=0xe9 operands=[{1 32} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x26758 opcode=0xb0 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0x144b5 opcode=0xe4 operands=[{2 0} {0 24624} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-
+[7/466] ✓ Advent_Crowther.z8
 [8/466] ✓ Adventureland.z5
 [9/466] ✓ AlongTheRiver.z5
 [10/466] ✓ Alpha.z5
@@ -175,7 +162,8 @@ Recent opcode history (most recent last):
 [160/466] ✓ adv550.z8
 [161/466] ✓ adv551.z8
 [162/466] ✓ advent.z3
-[163/466] ✓ advent.z6
+[163/466] ✗ advent.z6
+        Error: EXT opcode not implemented 0x12 at 0x6d95
 [164/466] ✓ advent.z8
 [165/466] ✓ adverbum.z5
 [166/466] ✓ alice3.z5
@@ -411,7 +399,8 @@ Recent opcode history (most recent last):
 [396/466] ✓ strike_force.z5
 [397/466] ✓ submarine-sabotage.z3
 [398/466] ✓ submarine-sabotage.z5
-[399/466] ✓ sunburst.z6
+[399/466] ✗ sunburst.z6
+        Error: V6 cursor operations not implemented
 [400/466] ✓ sutwin.z5
 [401/466] ✓ suvehnux.z5
 [402/466] ✓ sycamora.z5
@@ -483,6 +472,6 @@ Recent opcode history (most recent last):
 Results written to testdata\test_results.json
 
 === SUMMARY ===
-Passed: 464
-Failed: 2
+Passed: 463
+Failed: 3
 Total: 466

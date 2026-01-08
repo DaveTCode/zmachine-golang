@@ -81,13 +81,13 @@ func TestSetPropertyV1(t *testing.T) {
 
 	obj := zobject.GetObject(1, &z.Core, z.Alphabets) // Damp Cave
 
-	obj.SetProperty(11, 0xbeef, &z.Core)
+	obj.SetProperty(11, 0xbeef, &z.Core) // nolint:errcheck
 	property := obj.GetProperty(11, &z.Core)
 	if property.Data[0] != 0xbe || property.Data[1] != 0xef || property.Length != 2 {
 		t.Error("Property set didn't work on existing same length property")
 	}
 
-	obj.SetProperty(6, 0xfeed, &z.Core)
+	obj.SetProperty(6, 0xfeed, &z.Core) // nolint:errcheck
 	property = obj.GetProperty(6, &z.Core)
 	if property.Data[0] != 0xed || property.Length != 1 {
 		t.Error("Property set didn't work on short property")
@@ -189,7 +189,7 @@ func TestAttributesV1(t *testing.T) {
 	if forest.TestAttribute(1) || forest.TestAttribute(4) || forest.TestAttribute(10) {
 		t.Error("Forest should not have attributes 1,4,10 set")
 	}
-	if !(forest.TestAttribute(2) && forest.TestAttribute(3) && forest.TestAttribute(19)) {
+	if !forest.TestAttribute(2) || !forest.TestAttribute(3) || !forest.TestAttribute(19) {
 		t.Error("Forest should have attributes 2,3,19 set")
 	}
 
@@ -384,22 +384,35 @@ func TestGetNextPropertyV1(t *testing.T) {
 	dampCave := zobject.GetObject(1, &z.Core, z.Alphabets)
 	noNameNoProps := zobject.GetObject(117, &z.Core, z.Alphabets)
 
-	firstProp := dampCave.GetNextProperty(0, &z.Core)
+	firstProp, err := dampCave.GetNextProperty(0, &z.Core)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if firstProp != 30 {
 		t.Fatalf("First property of damp cave should have been 30")
 	}
 
-	nextProp := dampCave.GetNextProperty(28, &z.Core)
+	nextProp, err := dampCave.GetNextProperty(28, &z.Core)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if nextProp != 11 {
 		t.Fatalf("Next property of damp cave after 28 should have been 11")
 	}
 
-	afterLastProp := dampCave.GetNextProperty(6, &z.Core)
+	afterLastProp, err := dampCave.GetNextProperty(6, &z.Core)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if afterLastProp != 0 {
 		t.Fatalf("Should be no property after 6 on damp cave object")
 	}
 
-	if noNameNoProps.GetNextProperty(0, &z.Core) != 0 {
+	noNameNoProp, err := noNameNoProps.GetNextProperty(0, &z.Core)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if noNameNoProp != 0 {
 		t.Fatalf("Object with no property should always return 0 even for first prop")
 	}
 }

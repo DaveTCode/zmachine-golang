@@ -35,7 +35,7 @@ func TestZStringDecoding(t *testing.T) {
 		t.Run(string(tt.out), func(t *testing.T) {
 			core.Version = tt.version
 			for i, b := range tt.in {
-				core.WriteByte(uint32(i), b)
+				core.WriteZByte(uint32(i), b)
 			}
 			zstr, bytesRead := Decode(0, uint32(len(tt.in)), &core, &defaultAlphabetsV1, false)
 

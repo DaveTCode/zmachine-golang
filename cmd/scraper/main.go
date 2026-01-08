@@ -30,7 +30,7 @@ func main() {
 		fmt.Printf("Failed to fetch index: %v\n", err)
 		os.Exit(1)
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() // nolint:errcheck
 
 	if res.StatusCode != 200 {
 		fmt.Printf("Bad status code: %d\n", res.StatusCode)
@@ -96,13 +96,13 @@ func main() {
 
 		if resp.StatusCode != 200 {
 			fmt.Printf("FAILED: status %d\n", resp.StatusCode)
-			resp.Body.Close()
+			resp.Body.Close() // nolint:errcheck
 			failed++
 			continue
 		}
 
 		data, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 		if err != nil {
 			fmt.Printf("FAILED: %v\n", err)
 			failed++
@@ -130,6 +130,6 @@ func main() {
 	for _, game := range games {
 		manifest.WriteString(game.name + "\n")
 	}
-	os.WriteFile(manifestPath, []byte(manifest.String()), 0644)
+	os.WriteFile(manifestPath, []byte(manifest.String()), 0644) // nolint:errcheck
 	fmt.Printf("Wrote manifest to %s\n", manifestPath)
 }

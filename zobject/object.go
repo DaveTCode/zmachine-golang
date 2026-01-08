@@ -49,7 +49,7 @@ func GetObject(objId uint16, core *zcore.Core, alphabets *zstring.Alphabets) Obj
 	if core.Version >= 4 {
 		objectBase := uint32(core.ObjectTableBase + 63*2 + (objId-1)*14)
 		propertyPtr := core.ReadHalfWord(objectBase + 12)
-		nameLength := core.ReadByte(uint32(propertyPtr))
+		nameLength := core.ReadZByte(uint32(propertyPtr))
 		name, _ := zstring.Decode(uint32(propertyPtr+1), uint32(propertyPtr+1+uint16(nameLength)*2), core, alphabets, false)
 
 		return Object{
@@ -65,16 +65,16 @@ func GetObject(objId uint16, core *zcore.Core, alphabets *zstring.Alphabets) Obj
 	} else {
 		objectBase := uint32(core.ObjectTableBase + 31*2 + (objId-1)*9)
 		propertyPtr := core.ReadHalfWord(objectBase + 7)
-		nameLength := core.ReadByte(uint32(propertyPtr))
+		nameLength := core.ReadZByte(uint32(propertyPtr))
 		name, _ := zstring.Decode(uint32(propertyPtr+1), uint32(propertyPtr+1+uint16(nameLength)*2), core, alphabets, false)
 
 		return Object{
 			Id:              objId,
 			Name:            name,
 			Attributes:      (core.ReadLongWord(objectBase) >> 32) << 32,
-			Parent:          uint16(core.ReadByte(objectBase + 4)),
-			Sibling:         uint16(core.ReadByte(objectBase + 5)),
-			Child:           uint16(core.ReadByte(objectBase + 6)),
+			Parent:          uint16(core.ReadZByte(objectBase + 4)),
+			Sibling:         uint16(core.ReadZByte(objectBase + 5)),
+			Child:           uint16(core.ReadZByte(objectBase + 6)),
 			PropertyPointer: propertyPtr,
 			BaseAddress:     objectBase,
 		}
@@ -111,7 +111,7 @@ func (o *Object) SetParent(parent uint16, core *zcore.Core) {
 	if core.Version >= 4 {
 		core.WriteHalfWord(o.BaseAddress+6, parent)
 	} else {
-		core.WriteByte(o.BaseAddress+4, uint8(parent))
+		core.WriteZByte(o.BaseAddress+4, uint8(parent))
 	}
 	o.Parent = parent
 }
@@ -120,7 +120,7 @@ func (o *Object) SetSibling(sibling uint16, core *zcore.Core) {
 	if core.Version >= 4 {
 		core.WriteHalfWord(o.BaseAddress+8, sibling)
 	} else {
-		core.WriteByte(o.BaseAddress+5, uint8(sibling))
+		core.WriteZByte(o.BaseAddress+5, uint8(sibling))
 	}
 	o.Sibling = sibling
 }
@@ -129,7 +129,7 @@ func (o *Object) SetChild(child uint16, core *zcore.Core) {
 	if core.Version >= 4 {
 		core.WriteHalfWord(o.BaseAddress+10, child)
 	} else {
-		core.WriteByte(o.BaseAddress+6, uint8(child))
+		core.WriteZByte(o.BaseAddress+6, uint8(child))
 	}
 	o.Child = child
 }
