@@ -196,10 +196,31 @@ func runGameTest(gamePath string) (result TestResult) {
 	// Load the Z-machine
 	z := zmachine.LoadRom(storyBytes, inputChannel, outputChannel)
 
+	// Commands to try - these are common adventure game commands that should
+	// exercise various parts of the interpreter
+	commands := []string{
+		" ", // Just space
+		" ", // Just space
+		" ", // Just space
+		" ", // Just space
+		" ", // Just space
+		"",  // Just enter
+		"",  // Just enter
+		"",  // Just enter
+		"",  // Just enter
+		"",  // Just enter
+		"examine self",
+		"help",
+		"north",
+		"take all",
+		"quit",
+	}
+	commandIndex := 0
+
 	// Collect output until we hit input request or timeout
 	var screenOutput []string
 	done := make(chan bool)
-	timeout := time.After(5 * time.Second)
+	timeout := time.After(30 * time.Second) // Longer timeout for multiple commands
 
 	go func() {
 		defer func() {
@@ -225,10 +246,14 @@ func runGameTest(gamePath string) (result TestResult) {
 				screenOutput = append(screenOutput, lines...)
 			case zmachine.StateChangeRequest:
 				if v == zmachine.WaitForInput || v == zmachine.WaitForCharacter {
-					// Game is waiting for input - we've reached the first screen
-					collectOutput = false
-					// Send a quit command or just stop
-					inputChannel <- "quit"
+					// Game is waiting for input - send next command
+					if commandIndex < len(commands) {
+						inputChannel <- commands[commandIndex]
+						commandIndex++
+					} else {
+						// We've sent all commands, stop collecting
+						collectOutput = false
+					}
 				}
 			case zmachine.Quit:
 				collectOutput = false
@@ -241,7 +266,7 @@ func runGameTest(gamePath string) (result TestResult) {
 			}
 		case <-timeout:
 			result.Success = false
-			result.ErrorMessage = "Timeout waiting for first screen"
+			result.ErrorMessage = "Timeout running commands"
 			return
 		case <-done:
 			collectOutput = false
