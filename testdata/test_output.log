@@ -162,7 +162,8 @@ Found 466 games to test
 [160/466] ✓ adv550.z8
 [161/466] ✓ adv551.z8
 [162/466] ✓ advent.z3
-[163/466] ✓ advent.z6
+[163/466] ✗ advent.z6
+        Error: EXT opcode not implemented 0x12 at 0x6d9b
 [164/466] ✓ advent.z8
 [165/466] ✓ adverbum.z5
 [166/466] ✓ alice3.z5
@@ -471,6 +472,6 @@ Found 466 games to test
 Results written to testdata\test_results.json
 
 === SUMMARY ===
-Passed: 464
-Failed: 2
+Passed: 463
+Failed: 3
 Total: 466
