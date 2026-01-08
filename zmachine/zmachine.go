@@ -1334,7 +1334,12 @@ func (z *ZMachine) StepMachine() bool {
 				z.outputChannel <- WaitForCharacter
 				rawText := <-z.inputChannel
 
-				z.writeVariable(z.readIncPC(frame), uint16(rawText[0]), false)
+				// Handle empty input (treat as newline)
+				charCode := uint16(13) // Default to carriage return
+				if len(rawText) > 0 {
+					charCode = uint16(rawText[0])
+				}
+				z.writeVariable(z.readIncPC(frame), charCode, false)
 
 			case 23: // SCAN_TABLE
 				test := opcode.operands[0].Value(z)
