@@ -102,7 +102,8 @@ func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 
 	case z.Core.Version == 8:
 		return 8 * originalAddress
 	default:
-		panic("Invalid rom version")
+		z.warnOnce("invalid_version", "Warning: Invalid ROM version %d (PC = %x)", z.Core.Version, z.currentInstructionPC)
+		return 2 * originalAddress // Default to v1-3 behavior
 	}
 }
 
@@ -124,7 +125,8 @@ func (z *ZMachine) readVariable(variable uint8, indirect bool) uint16 {
 	switch {
 	case variable == 0: // Magic stack variable
 		if len(currentCallFrame.routineStack) == 0 {
-			panic("Attempt to read from empty routine stack")
+			z.warnOnce("stack_underflow", "Warning: Attempt to read from empty routine stack (PC = %x)", z.currentInstructionPC)
+			return 0
 		}
 
 		// "In the seven opcodes that take indirect variable references (inc, dec, inc_chk, dec_chk, load, store, pull),
@@ -138,7 +140,8 @@ func (z *ZMachine) readVariable(variable uint8, indirect bool) uint16 {
 	case variable < 16: // Routine local variables
 
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
-			panic("Attempt to access non-existing local variable")
+			z.warnOnce("invalid_local_var_read", "Warning: Attempt to read non-existing local variable %d (PC = %x)", variable, z.currentInstructionPC)
+			return 0
 		}
 
 		return currentCallFrame.locals[variable-1]
@@ -160,7 +163,8 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) {
 		currentCallFrame.push(value)
 	case variable < 16: // Routine local variables
 		if variable-1 >= uint8(len(currentCallFrame.locals)) {
-			panic("Attempt to access non-existing local variable")
+			z.warnOnce("invalid_local_var_write", "Warning: Attempt to write non-existing local variable %d (PC = %x)", variable, z.currentInstructionPC)
+			return
 		}
 
 		currentCallFrame.locals[variable-1] = value
@@ -916,8 +920,13 @@ func (z *ZMachine) StepMachine() bool {
 				z.writeVariable(z.readIncPC(frame), 0, false)
 			} else {
 				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
-				nextProp := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
-				z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
+				nextProp, err := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
+				if err != nil {
+					z.warnOnce("get_next_prop_invalid", "Warning: @get_next_prop error: %v (PC = %x)", err, opcode.pc)
+					z.writeVariable(z.readIncPC(frame), 0, false)
+				} else {
+					z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
+				}
 			}
 
 		case 20: // ADD
@@ -1149,7 +1158,10 @@ func (z *ZMachine) StepMachine() bool {
 					z.warnOnce("put_prop", "Warning: @put_prop called with object 0 (PC = %x)", opcode.pc)
 				} else {
 					obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
-					obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), &z.Core)
+					err := obj.SetProperty(uint8(opcode.operands[1].Value(z)), opcode.operands[2].Value(z), &z.Core)
+					if err != nil {
+						z.warnOnce("put_prop_invalid", "Warning: @put_prop error: %v (PC = %x)", err, opcode.pc)
+					}
 				}
 
 			case 4: // SREAD

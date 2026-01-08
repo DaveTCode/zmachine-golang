@@ -36,7 +36,7 @@ func GetPropertyLength(core *zcore.Core, addr uint32) uint16 {
 	}
 }
 
-func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) {
+func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) error {
 	objectNameLength := core.ReadByte(uint32(o.PropertyPointer))
 	currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 
@@ -54,17 +54,17 @@ func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) {
 			case 2:
 				core.WriteHalfWord(currentPtr+1, value)
 			default:
-				panic(fmt.Sprintf("Invalid property length %d, can't set value", propertyId))
+				return fmt.Errorf("invalid property length %d, can't set value", property.Length)
 			}
 
-			return
+			return nil
 		}
 
 		currentPtr += uint32(property.Length) + uint32(property.PropertyHeaderLength)
 	}
 
-	// Property not found on object, returning global default for that property
-	panic(fmt.Sprintf("Invalid property (%d) requested for object (%d)", propertyId, o.Id))
+	// Property not found on object
+	return fmt.Errorf("property %d not found on object %d", propertyId, o.Id)
 }
 
 func (o *Object) GetProperty(propertyId uint8, core *zcore.Core) Property {
@@ -129,22 +129,22 @@ func (o *Object) GetPropertyByAddress(propertyAddr uint32, core *zcore.Core) Pro
 	}
 }
 
-func (o *Object) GetNextProperty(propertyId uint8, core *zcore.Core) uint8 {
+func (o *Object) GetNextProperty(propertyId uint8, core *zcore.Core) (uint8, error) {
 	if propertyId == 0 { // Special case, means get first property
 		if core.ReadByte(uint32(o.PropertyPointer)) == 0 {
-			return 0 // Special case, no next property means return 0
+			return 0, nil // Special case, no next property means return 0
 		}
 
 		objectNameLength := core.ReadByte(uint32(o.PropertyPointer))
 		currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
-		return o.GetPropertyByAddress(currentPtr, core).Id
+		return o.GetPropertyByAddress(currentPtr, core).Id, nil
 	}
 
 	property := o.GetProperty(propertyId, core)
 	if property.DataAddress == 0 {
-		panic(fmt.Sprintf("Can't call get next property with invalid property id (object %d, prop %d)", o.Id, propertyId))
+		return 0, fmt.Errorf("invalid property id %d for object %d", propertyId, o.Id)
 	}
 
 	nextPropertyPtr := property.DataAddress + uint32(property.Length)
-	return o.GetPropertyByAddress(nextPropertyPtr, core).Id
+	return o.GetPropertyByAddress(nextPropertyPtr, core).Id, nil
 }
