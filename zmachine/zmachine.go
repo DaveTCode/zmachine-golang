@@ -32,6 +32,8 @@ type Warning string
 
 type EraseWindowRequest int
 
+type EraseLineRequest int
+
 type StateChangeRequest int
 
 const (
@@ -1232,6 +1234,20 @@ func (z *ZMachine) StepMachine() bool {
 
 				z.outputChannel <- z.screenModel
 				z.outputChannel <- EraseWindowRequest(window)
+
+			case 14: // ERASE_LINE
+				if z.Core.Version < 4 {
+					return z.reportError("ERASE_LINE not available on v1-3")
+				}
+
+				value := int16(opcode.operands[0].Value(z))
+				switch value {
+				case 1:
+					// Erase from cursor to end of line
+					z.outputChannel <- EraseLineRequest(1)
+				default:
+					// "If the value is anything other than 1, do nothing." - Spec
+				}
 
 			case 15: // SET_CURSOR
 				line := opcode.operands[0].Value(z)

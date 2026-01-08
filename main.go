@@ -23,6 +23,7 @@ var (
 
 type textUpdateMessage string
 type stateUpdateMessage zmachine.StateChangeRequest
+type eraseLineRequest zmachine.EraseLineRequest
 type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
@@ -260,6 +261,26 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			runInterpreter(m.zMachine),
 		)
 
+	case eraseLineRequest:
+		// Don't think you can erase line in lower window
+		if !m.screenModel.LowerWindowActive {
+			line := m.screenModel.UpperWindowCursorY
+			start := m.screenModel.UpperWindowCursorX
+			if line >= 0 && line < len(m.upperWindowText) && start >= 0 && start < len(m.upperWindowText[line]) {
+				row := m.upperWindowText[line]
+				before := row[:start]
+				after := ""
+				if start < len(row) {
+					after = row[start:]
+				}
+				fullText := before + strings.Repeat(" ", len(after))
+				if len(fullText) > m.width {
+					fullText = fullText[:m.width]
+				}
+				m.upperWindowText[line] = fullText
+			}
+		}
+
 	case eraseWindowRequest:
 		switch int(msg) {
 		case -2: // Keep split windows and clear both
@@ -294,7 +315,7 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case runtimeErrorMessage:
 		m.runtimeError = string(msg)
 		return m, tea.Quit
-		
+
 	case warningMessage:
 		// Warnings are non-fatal - print to stderr and continue
 		fmt.Fprintf(os.Stderr, "%s\n", msg)
