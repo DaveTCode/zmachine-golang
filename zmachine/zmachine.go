@@ -657,12 +657,12 @@ func (z *ZMachine) StepMachine() bool {
 			return false
 
 		case 8: // RET_POPPED
-			v := frame.pop()
+			v := frame.popWithWarning(z)
 			z.retValue(v)
 
 		case 9: // POP (v1-4) / CATCH (v5+)
 			if z.Core.Version <= 4 {
-				frame.pop()
+				frame.popWithWarning(z)
 			} else {
 				// Tag the current frame with a unique frame pointer and store it
 				z.nextFramePointer++
@@ -1203,10 +1203,10 @@ func (z *ZMachine) StepMachine() bool {
 					if opcode.numOperands > 0 {
 						return z.reportError("V6 PULL with user stack not implemented")
 					}
-					value := frame.pop()
+					value := frame.popWithWarning(z)
 					z.writeVariable(z.readIncPC(frame), value, false)
 				} else {
-					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(), true)
+					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.popWithWarning(z), true)
 				}
 
 			case 10: // SPLIT_WINDOW
