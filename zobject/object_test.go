@@ -228,8 +228,7 @@ func TestMoveObject(t *testing.T) {
 }
 
 // TestMoveObjectFirstChildToSameParent tests moving an object that is the first child
-// of a parent back to the same parent. The implementation optimizes this case by
-// returning early when parent already matches, so the object tree remains unchanged.
+// of a parent back to the same parent. The object should remain first child with same sibling.
 func TestMoveObjectFirstChildToSameParent(t *testing.T) {
 	z := loadZork1()
 
@@ -238,19 +237,76 @@ func TestMoveObjectFirstChildToSameParent(t *testing.T) {
 	originalFirstChild := westOfHouse.Child // 252 (cretin)
 	originalSibling := zobject.GetObject(originalFirstChild, &z.Core, z.Alphabets).Sibling
 
-	// Move the first child to the same parent - should be a no-op due to optimization
+	// Move the first child to the same parent - should re-insert as first child
 	z.MoveObject(originalFirstChild, 35)
 
 	// Re-read objects after move
 	westOfHouse = zobject.GetObject(35, &z.Core, z.Alphabets)
 	movedObj := zobject.GetObject(originalFirstChild, &z.Core, z.Alphabets)
 
-	// Object tree should be unchanged
+	// Object should still be first child
 	if westOfHouse.Child != originalFirstChild {
 		t.Errorf("First child should still be %d, got %d", originalFirstChild, westOfHouse.Child)
 	}
+	// Sibling should be the same (was second child, still is)
 	if movedObj.Sibling != originalSibling {
 		t.Errorf("Object's sibling should still be %d, got %d", originalSibling, movedObj.Sibling)
+	}
+
+	// Check for circular sibling chain
+	seen := make(map[uint16]bool)
+	current := westOfHouse.Child
+	for current != 0 {
+		if seen[current] {
+			t.Fatalf("Circular sibling chain detected! Object %d appears twice", current)
+		}
+		seen[current] = true
+		current = zobject.GetObject(current, &z.Core, z.Alphabets).Sibling
+
+		if len(seen) > 1000 {
+			t.Fatal("Too many siblings - likely circular chain")
+		}
+	}
+}
+
+// TestMoveObjectNonFirstChildToSameParent tests moving an object that is NOT the first
+// child of a parent back to the same parent. Per Z-machine spec, INSERT_OBJ should always
+// make the object the FIRST child, so this should move it to the front.
+func TestMoveObjectNonFirstChildToSameParent(t *testing.T) {
+	z := loadZork1()
+
+	// Get the children of West of House
+	westOfHouse := zobject.GetObject(35, &z.Core, z.Alphabets)
+	firstChild := westOfHouse.Child
+	secondChild := zobject.GetObject(firstChild, &z.Core, z.Alphabets).Sibling
+
+	if secondChild == 0 {
+		t.Skip("Need an object with at least 2 children for this test")
+	}
+
+	thirdChild := zobject.GetObject(secondChild, &z.Core, z.Alphabets).Sibling
+
+	// Move the second child to the same parent - should become the first child
+	z.MoveObject(secondChild, 35)
+
+	// Re-read objects after move
+	westOfHouse = zobject.GetObject(35, &z.Core, z.Alphabets)
+	movedObj := zobject.GetObject(secondChild, &z.Core, z.Alphabets)
+	originalFirstChild := zobject.GetObject(firstChild, &z.Core, z.Alphabets)
+
+	// The moved object should now be the first child
+	if westOfHouse.Child != secondChild {
+		t.Errorf("Moved object should now be first child, got %d", westOfHouse.Child)
+	}
+
+	// The moved object's sibling should be the original first child
+	if movedObj.Sibling != firstChild {
+		t.Errorf("Moved object's sibling should be %d, got %d", firstChild, movedObj.Sibling)
+	}
+
+	// The original first child's sibling should now be the third child (skipping the moved one)
+	if originalFirstChild.Sibling != thirdChild {
+		t.Errorf("Original first child's sibling should be %d, got %d", thirdChild, originalFirstChild.Sibling)
 	}
 
 	// Check for circular sibling chain

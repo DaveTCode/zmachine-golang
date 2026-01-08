@@ -146,7 +146,7 @@
       ]
     },
     {
-      "name": "Launch promoted.z5",
+      "name": "Launch residnt2.z5",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -154,7 +154,7 @@
       "console": "integratedTerminal",
       "args": [
         "--rom",
-        "stories/promoted.z5"
+        "stories/residnt2.z5"
       ]
     },
     {

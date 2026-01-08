@@ -402,12 +402,6 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 	}
 
 	object := zobject.GetObject(objId, &z.Core, z.Alphabets)
-	destinationObject := zobject.GetObject(newParent, &z.Core, z.Alphabets)
-
-	// Don't bother moving an object if the parent already matches (the algorithm below breaks then anyway!)
-	if object.Parent == destinationObject.Id {
-		return
-	}
 
 	// Detach it from it's current place in the tree
 	z.RemoveObject(object.Id)
@@ -419,6 +413,9 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 	// Set new location in the tree
 	object.SetSibling(destChild, &z.Core)
 	object.SetParent(newParent, &z.Core)
+
+	// Re-read destination object to get correct base address for SetChild
+	destinationObject := zobject.GetObject(newParent, &z.Core, z.Alphabets)
 	destinationObject.SetChild(object.Id, &z.Core)
 }
 
