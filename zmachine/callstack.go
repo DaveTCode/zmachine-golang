@@ -25,7 +25,8 @@ func (f *CallStackFrame) popWithWarning(z *ZMachine) uint16 {
 	return i
 }
 
-// pop pops a value from the routine stack without bounds checking.
+// pop pops a value from the routine stack with silent bounds checking.
+// Returns 0 if stack is empty without warning.
 // Use popWithWarning instead for opcode implementations.
 // This method exists for backward compatibility with readVariable which has its own warning.
 func (f *CallStackFrame) pop() uint16 {
@@ -47,7 +48,8 @@ func (f *CallStackFrame) peekWithWarning(z *ZMachine) uint16 {
 	return f.routineStack[len(f.routineStack)-1]
 }
 
-// peek peeks at the top value of the routine stack without bounds checking.
+// peek peeks at the top value of the routine stack with silent bounds checking.
+// Returns 0 if stack is empty without warning.
 // Use peekWithWarning instead for opcode implementations.
 // This method exists for backward compatibility with readVariable which has its own warning.
 func (f *CallStackFrame) peek() uint16 {
