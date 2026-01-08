@@ -14,12 +14,20 @@ func (f *CallStackFrame) push(i uint16) {
 }
 
 func (f *CallStackFrame) pop() uint16 {
+	if len(f.routineStack) == 0 {
+		// Return 0 for empty stack - caller should check via readVariable which has proper warning
+		return 0
+	}
 	i := f.routineStack[len(f.routineStack)-1]
 	f.routineStack = f.routineStack[:len(f.routineStack)-1]
 	return i
 }
 
 func (f *CallStackFrame) peek() uint16 {
+	if len(f.routineStack) == 0 {
+		// Return 0 for empty stack - caller should check via readVariable which has proper warning
+		return 0
+	}
 	return f.routineStack[len(f.routineStack)-1]
 }
 
