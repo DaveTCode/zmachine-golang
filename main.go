@@ -30,6 +30,7 @@ type screenModelMessage zmachine.ScreenModel
 type restartRequest bool
 type runtimeErrorMessage zmachine.RuntimeError
 type warningMessage zmachine.Warning
+type soundEffectRequest zmachine.SoundEffectRequest
 
 type runningStoryState int
 
@@ -319,6 +320,22 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case warningMessage:
 		// Warnings are non-fatal - print to stderr and continue
 		fmt.Fprintf(os.Stderr, "%s\n", msg)
+		return m, waitForInterpreter(m.outputChannel)
+
+	case soundEffectRequest:
+		switch msg.SoundNumber {
+		case 1: // High pitched beep, no repeats, volume etc
+			fmt.Print("\a")
+		case 2: // Low pitched beep, no repeats, volume etc
+			fmt.Print("\a")
+		default:
+			// Not supporting other sound effects at the moment
+			if msg.Routine != 0 {
+				// Warnings are non-fatal - print to stderr and continue
+				fmt.Fprintf(os.Stderr, "Warning: sound effect (%d) expecting routine call after completion not supported\n", msg.Effect)
+			}
+		}
+
 		return m, waitForInterpreter(m.outputChannel)
 	}
 

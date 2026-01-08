@@ -42,6 +42,14 @@ const (
 	Running          StateChangeRequest = iota
 )
 
+type SoundEffectRequest struct {
+	SoundNumber uint16
+	Effect      uint16
+	Volume      byte
+	Repeats     byte
+	Routine     uint16
+}
+
 type RoutineType int
 
 const (
@@ -1328,6 +1336,40 @@ func (z *ZMachine) StepMachine() bool {
 					}
 				case 4, -4:
 					z.streams.CommandScript = stream > 0
+				}
+
+			case 21: // SOUND_EFFECT
+				if z.Core.Version < 3 {
+					return z.reportError("SOUND_EFFECT not available on v1-2")
+				}
+
+				soundNumber := opcode.operands[0].Value(z) // Will default to 0 if omitted by compiler
+				if soundNumber == 0 {
+					soundNumber = 1 // Per spec, sound effect 0 is treated as sound effect 1
+				}
+
+				effect := uint16(0)
+				volume := byte(0)
+				repeats := byte(0)
+				routine := uint16(0)
+
+				if opcode.numOperands > 1 {
+					effect = opcode.operands[1].Value(z) // "The effect can be: 1 (prepare), 2 (start), 3 (stop), 4 (finish with)."
+				}
+				if opcode.numOperands > 2 {
+					volume = byte(opcode.operands[2].Value(z))
+					repeats = byte(opcode.operands[2].Value(z) >> 8)
+				}
+				if opcode.numOperands > 3 {
+					routine = opcode.operands[3].Value(z)
+				}
+
+				z.outputChannel <- SoundEffectRequest{
+					SoundNumber: soundNumber,
+					Effect:      effect,
+					Volume:      volume,
+					Repeats:     repeats,
+					Routine:     routine,
 				}
 
 			case 22: // READ_CHAR
