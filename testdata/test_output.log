@@ -175,8 +175,7 @@ Recent opcode history (most recent last):
 [160/466] ✓ adv550.z8
 [161/466] ✓ adv551.z8
 [162/466] ✓ advent.z3
-[163/466] ✗ advent.z6
-        Error: EXT opcode not implemented 0x12 at 0x6d9b
+[163/466] ✓ advent.z6
 [164/466] ✓ advent.z8
 [165/466] ✓ adverbum.z5
 [166/466] ✓ alice3.z5
@@ -187,8 +186,7 @@ Recent opcode history (most recent last):
 [171/466] ✓ appall.z5
 [172/466] ✓ asterix.z5
 [173/466] ✓ atrocitron.z5
-[174/466] ✗ ats.z8
-        Error: VAR opcode not implemented 0xf5 at 0x2da7c
+[174/466] ✓ ats.z8
 [175/466] ✓ awaken.z5
 [176/466] ✓ awitl.z5
 [177/466] ✓ ayac.z5
@@ -283,20 +281,7 @@ Recent opcode history (most recent last):
 [266/466] ✓ golf.z5
 [267/466] ✓ gostak.z5
 [268/466] ✓ gsdemo.z8
-[269/466] ✗ guess.z5
-        Error: Internal error: Error to have more words than allowed in the buffer here
-Recent opcode history (most recent last):
-  PC=0xf651 opcode=0x8d operands=[{0 26327} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf654 opcode=0xa0 operands=[{2 25} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf657 opcode=0xb2 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf668 opcode=0xb2 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf673 opcode=0xb2 operands=[{0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf678 opcode=0xe2 operands=[{0 17347} {1 0} {1 7} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf67e opcode=0xe2 operands=[{0 17468} {1 0} {1 1} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf684 opcode=0xcd operands=[{1 252} {0 17347} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf689 opcode=0xe2 operands=[{2 252} {1 1} {1 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-  PC=0xf68e opcode=0xe4 operands=[{2 252} {0 17468} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
-
+[269/466] ✓ guess.z5
 [270/466] ✓ guestret.z5
 [271/466] ✓ gussdeath.z3
 [272/466] ✓ h2.z5
@@ -393,8 +378,7 @@ Recent opcode history (most recent last):
 [363/466] ✓ reverb.z5
 [364/466] ✓ reverzi.z5
 [365/466] ✓ ribbons.z5
-[366/466] ✗ robots.z5
-        Error: VAR opcode not implemented 0xf5 at 0x13cb
+[366/466] ✓ robots.z5
 [367/466] ✓ rogue.z5
 [368/466] ✓ samhain.z5
 [369/466] ✓ saveprinceton.z8
@@ -483,8 +467,7 @@ Recent opcode history (most recent last):
 [452/466] ✓ wumpus.z5
 [453/466] ✓ wurm.z5
 [454/466] ✓ yagwad.z5
-[455/466] ✗ z-life.z5
-        Error: VAR opcode not implemented 0xf5 at 0x1222
+[455/466] ✓ z-life.z5
 [456/466] ✓ zball.z5
 [457/466] ✓ zcamel.z5
 [458/466] ✓ zdungeon.z5
@@ -500,6 +483,6 @@ Recent opcode history (most recent last):
 Results written to testdata\test_results.json
 
 === SUMMARY ===
-Passed: 459
-Failed: 7
+Passed: 464
+Failed: 2
 Total: 466

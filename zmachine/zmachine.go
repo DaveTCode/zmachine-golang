@@ -333,8 +333,10 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 		bytesRead += 1
 	}
 
-	if z.Core.ReadByte(baddr2) < uint8(len(words)) {
-		panic("Error to have more words than allowed in the buffer here")
+	// Limit words to the maximum allowed in the parse buffer (like Frotz does)
+	maxWords := int(z.Core.ReadByte(baddr2))
+	if len(words) > maxWords {
+		words = words[:maxWords]
 	}
 
 	parseBufferPtr := baddr2 + 1
