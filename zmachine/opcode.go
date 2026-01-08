@@ -48,7 +48,8 @@ type Opcode struct {
 	operandCount OperandCount
 	opcodeForm   OpcodeForm
 	opcodeNumber uint8
-	operands     []Operand
+	operands     [8]Operand // Found that some corrupted game files have EXT opcode which don't have the necessary number of opcodes. This is how other interpreters handle it.
+	numOperands  int        // Different to operandCount which tracks how many operands there _should_ be for decoding instructions
 }
 
 func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
@@ -75,9 +76,11 @@ func parseVariableOperands(z *ZMachine, frame *CallStackFrame, opcode *Opcode) {
 
 		switch operandType {
 		case smallConstant, variable:
-			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: uint16(z.readIncPC(frame))})
+			opcode.operands[opcode.numOperands] = Operand{operandType: operandType, value: uint16(z.readIncPC(frame))}
+			opcode.numOperands++
 		case largeConstant:
-			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: z.ReadHalfWordIncPC(frame)})
+			opcode.operands[opcode.numOperands] = Operand{operandType: operandType, value: z.ReadHalfWordIncPC(frame)}
+			opcode.numOperands++
 		}
 	}
 }
@@ -113,10 +116,12 @@ func ParseOpcode(z *ZMachine) Opcode {
 
 		switch operandType {
 		case 0b00: // Large Constant (2 bytes)
-			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: z.ReadHalfWordIncPC(frame)})
+			opcode.operands[0] = Operand{operandType: OperandType(operandType), value: z.ReadHalfWordIncPC(frame)}
+			opcode.numOperands = 1
 			opcode.operandCount = OP1
 		case 0b01, 0b10: // Small constant or variable
-			opcode.operands = append(opcode.operands, Operand{operandType: OperandType(operandType), value: uint16(z.readIncPC(frame))})
+			opcode.operands[0] = Operand{operandType: OperandType(operandType), value: uint16(z.readIncPC(frame))}
+			opcode.numOperands = 1
 			opcode.operandCount = OP1
 		case 0b11: // Omitted
 			opcode.operandCount = OP0
@@ -135,9 +140,10 @@ func ParseOpcode(z *ZMachine) Opcode {
 			operand2Type = variable
 		}
 
-		for _, operandType := range []OperandType{operand1Type, operand2Type} {
-			opcode.operands = append(opcode.operands, Operand{operandType: operandType, value: uint16(z.readIncPC(frame))})
+		for i, operandType := range []OperandType{operand1Type, operand2Type} {
+			opcode.operands[i] = Operand{operandType: operandType, value: uint16(z.readIncPC(frame))}
 		}
+		opcode.numOperands = 2
 	}
 
 	return opcode

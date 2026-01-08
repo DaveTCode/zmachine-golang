@@ -222,7 +222,7 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 	locals := make([]uint16, localVariableCount)
 
 	for i := 0; i < int(localVariableCount); i++ {
-		if i+1 < len(opcode.operands) {
+		if i+1 < opcode.numOperands {
 			// Value passed to routine, override default
 			locals[i] = opcode.operands[i+1].Value(z)
 		} else {
@@ -242,7 +242,7 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 		locals:          locals,
 		routineStack:    make([]uint16, 0),
 		routineType:     routineType, // TODO - Not really sure what this is, v3+ only
-		numValuesPassed: len(opcode.operands) - 1,
+		numValuesPassed: opcode.numOperands - 1,
 		framePointer:    0, // TODO - Only used for try/catch in later versions
 	})
 }
@@ -770,8 +770,8 @@ func (z *ZMachine) StepMachine() bool {
 		case 1: // JE
 			a := opcode.operands[0].Value(z)
 			branch := false
-			for _, b := range opcode.operands[1:len(opcode.operands)] {
-				if a == b.Value(z) {
+			for i := 1; i < opcode.numOperands; i++ {
+				if a == opcode.operands[i].Value(z) {
 					branch = true
 				}
 			}
@@ -1020,7 +1020,7 @@ func (z *ZMachine) StepMachine() bool {
 				requestFont := Font(opcode.operands[0].Value(z))
 
 				// V6 has optional window parameter - we don't support multiple windows
-				if z.Core.Version == 6 && len(opcode.operands) > 1 {
+				if z.Core.Version == 6 && opcode.numOperands > 1 {
 					window := int16(opcode.operands[1].Value(z))
 					if window != -3 && window != 0 {
 						z.warnOnce("set_font_v6_window", "Warning: SET_FONT with window %d not supported (only -3 and 0)", window)
@@ -1171,7 +1171,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 9: // PULL
 				if z.Core.Version == 6 {
-					if len(opcode.operands) > 0 {
+					if opcode.numOperands > 0 {
 						return z.reportError("V6 PULL with user stack not implemented")
 					}
 					value := frame.pop()
@@ -1339,7 +1339,7 @@ func (z *ZMachine) StepMachine() bool {
 				length := opcode.operands[2].Value(z)
 				form := uint16(0x82)
 
-				if len(opcode.operands) == 4 {
+				if opcode.numOperands == 4 {
 					form = opcode.operands[3].Value(z)
 				}
 
@@ -1365,13 +1365,13 @@ func (z *ZMachine) StepMachine() bool {
 				dictionaryToUse := z.dictionary
 				flag := false
 
-				if len(opcode.operands) > 2 {
+				if opcode.numOperands > 2 {
 					dictionaryAddress := opcode.operands[2].Value(z)
 
 					// TODO - Handle special case custom dictionaries with negative number of entries (unsorted)
 					dictionaryToUse = dictionary.ParseDictionary(uint32(dictionaryAddress), &z.Core, z.Alphabets)
 
-					if len(opcode.operands) == 4 {
+					if opcode.numOperands == 4 {
 						flag = opcode.operands[3].Value(z) != 0
 
 						return z.reportError("TOKENISE with 4th operand not implemented")
@@ -1389,10 +1389,10 @@ func (z *ZMachine) StepMachine() bool {
 				height := uint16(1)
 				skip := uint16(0)
 
-				if len(opcode.operands) > 2 {
+				if opcode.numOperands > 2 {
 					height = opcode.operands[2].Value(z)
 
-					if len(opcode.operands) > 3 {
+					if opcode.numOperands > 3 {
 						skip = opcode.operands[3].Value(z)
 					}
 				}
