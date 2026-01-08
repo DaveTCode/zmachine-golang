@@ -227,6 +227,101 @@ func TestMoveObject(t *testing.T) {
 	}
 }
 
+// TestMoveObjectFirstChildToSameParent tests moving an object that is the first child
+// of a parent back to the same parent. The implementation optimizes this case by
+// returning early when parent already matches, so the object tree remains unchanged.
+func TestMoveObjectFirstChildToSameParent(t *testing.T) {
+	z := loadZork1()
+
+	// In Zork1, object 35 (West of House) has child 252 (cretin/player) as first child
+	westOfHouse := zobject.GetObject(35, &z.Core, z.Alphabets)
+	originalFirstChild := westOfHouse.Child // 252 (cretin)
+	originalSibling := zobject.GetObject(originalFirstChild, &z.Core, z.Alphabets).Sibling
+
+	// Move the first child to the same parent - should be a no-op due to optimization
+	z.MoveObject(originalFirstChild, 35)
+
+	// Re-read objects after move
+	westOfHouse = zobject.GetObject(35, &z.Core, z.Alphabets)
+	movedObj := zobject.GetObject(originalFirstChild, &z.Core, z.Alphabets)
+
+	// Object tree should be unchanged
+	if westOfHouse.Child != originalFirstChild {
+		t.Errorf("First child should still be %d, got %d", originalFirstChild, westOfHouse.Child)
+	}
+	if movedObj.Sibling != originalSibling {
+		t.Errorf("Object's sibling should still be %d, got %d", originalSibling, movedObj.Sibling)
+	}
+
+	// Check for circular sibling chain
+	seen := make(map[uint16]bool)
+	current := westOfHouse.Child
+	for current != 0 {
+		if seen[current] {
+			t.Fatalf("Circular sibling chain detected! Object %d appears twice", current)
+		}
+		seen[current] = true
+		current = zobject.GetObject(current, &z.Core, z.Alphabets).Sibling
+
+		if len(seen) > 1000 {
+			t.Fatal("Too many siblings - likely circular chain")
+		}
+	}
+}
+
+// TestMoveObjectToDifferentParentThenBack tests the scenario that caused the original bug:
+// moving an object away and then back to its original parent. The second move must
+// correctly read the destination's child pointer AFTER unlinking.
+func TestMoveObjectToDifferentParentThenBack(t *testing.T) {
+	z := loadZork1()
+
+	// Get initial state - West of House (35) has cretin (252) as first child
+	westOfHouse := zobject.GetObject(35, &z.Core, z.Alphabets)
+	cretin := westOfHouse.Child // 252
+	cretinOriginalSibling := zobject.GetObject(cretin, &z.Core, z.Alphabets).Sibling
+
+	// Move cretin to forest (4)
+	z.MoveObject(cretin, 4)
+
+	// Verify cretin is now in forest
+	forest := zobject.GetObject(4, &z.Core, z.Alphabets)
+	if forest.Child != cretin {
+		t.Fatalf("Cretin should be first child of forest after first move")
+	}
+
+	// Now move cretin back to West of House - this is where the bug would manifest
+	z.MoveObject(cretin, 35)
+
+	// Re-read all objects
+	westOfHouse = zobject.GetObject(35, &z.Core, z.Alphabets)
+	cretinObj := zobject.GetObject(cretin, &z.Core, z.Alphabets)
+
+	// Cretin should now be first child of West of House
+	if westOfHouse.Child != cretin {
+		t.Errorf("Cretin should be first child of West of House, got %d", westOfHouse.Child)
+	}
+
+	// Cretin's sibling should be what was previously the first child (after cretin left)
+	if cretinObj.Sibling != cretinOriginalSibling {
+		t.Errorf("Cretin's sibling should be %d, got %d", cretinOriginalSibling, cretinObj.Sibling)
+	}
+
+	// Critical: check for circular sibling chain
+	seen := make(map[uint16]bool)
+	current := westOfHouse.Child
+	for current != 0 {
+		if seen[current] {
+			t.Fatalf("Circular sibling chain detected! Object %d appears twice", current)
+		}
+		seen[current] = true
+		current = zobject.GetObject(current, &z.Core, z.Alphabets).Sibling
+
+		if len(seen) > 1000 {
+			t.Fatal("Too many siblings - likely circular chain")
+		}
+	}
+}
+
 func TestGetNextPropertyV1(t *testing.T) {
 	z := loadZork1()
 

@@ -412,9 +412,13 @@ func (z *ZMachine) MoveObject(objId uint16, newParent uint16) {
 	// Detach it from it's current place in the tree
 	z.RemoveObject(object.Id)
 
+	// Re-read destination's child from memory after removal, as RemoveObject may have
+	// modified it (e.g., if objId was the first child of newParent)
+	destChild := zobject.GetObject(newParent, &z.Core, z.Alphabets).Child
+
 	// Set new location in the tree
-	object.SetSibling(destinationObject.Child, &z.Core)
-	object.SetParent(destinationObject.Id, &z.Core)
+	object.SetSibling(destChild, &z.Core)
+	object.SetParent(newParent, &z.Core)
 	destinationObject.SetChild(object.Id, &z.Core)
 }
 
