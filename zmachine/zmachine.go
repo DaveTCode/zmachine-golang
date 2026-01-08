@@ -631,6 +631,9 @@ func (z *ZMachine) StepMachine() bool {
 			z.appendText("\n")
 			z.retValue(1)
 
+		case 4: // NOP
+			// Do nothing
+
 		case 7: // RESTART
 			z.outputChannel <- Restart(true)
 			return false
