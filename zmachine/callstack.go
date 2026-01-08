@@ -13,9 +13,11 @@ func (f *CallStackFrame) push(i uint16) {
 	f.routineStack = append(f.routineStack, i)
 }
 
-func (f *CallStackFrame) pop() uint16 {
+// popWithWarning pops a value from the routine stack with bounds checking.
+// If the stack is empty, warns and returns 0.
+func (f *CallStackFrame) popWithWarning(z *ZMachine) uint16 {
 	if len(f.routineStack) == 0 {
-		// Return 0 for empty stack - caller should check via readVariable which has proper warning
+		z.warnOnce("stack_underflow_pop", "Warning: Attempt to pop from empty routine stack (PC = %x)", z.currentInstructionPC)
 		return 0
 	}
 	i := f.routineStack[len(f.routineStack)-1]
@@ -23,9 +25,35 @@ func (f *CallStackFrame) pop() uint16 {
 	return i
 }
 
+// pop pops a value from the routine stack with silent bounds checking.
+// Returns 0 if stack is empty without warning.
+// Use popWithWarning instead for opcode implementations.
+// This method exists for backward compatibility with readVariable which has its own warning.
+func (f *CallStackFrame) pop() uint16 {
+	if len(f.routineStack) == 0 {
+		return 0
+	}
+	i := f.routineStack[len(f.routineStack)-1]
+	f.routineStack = f.routineStack[:len(f.routineStack)-1]
+	return i
+}
+
+// peekWithWarning peeks at the top value of the routine stack with bounds checking.
+// If the stack is empty, warns and returns 0.
+func (f *CallStackFrame) peekWithWarning(z *ZMachine) uint16 {
+	if len(f.routineStack) == 0 {
+		z.warnOnce("stack_underflow_peek", "Warning: Attempt to peek empty routine stack (PC = %x)", z.currentInstructionPC)
+		return 0
+	}
+	return f.routineStack[len(f.routineStack)-1]
+}
+
+// peek peeks at the top value of the routine stack with silent bounds checking.
+// Returns 0 if stack is empty without warning.
+// Use peekWithWarning instead for opcode implementations.
+// This method exists for backward compatibility with readVariable which has its own warning.
 func (f *CallStackFrame) peek() uint16 {
 	if len(f.routineStack) == 0 {
-		// Return 0 for empty stack - caller should check via readVariable which has proper warning
 		return 0
 	}
 	return f.routineStack[len(f.routineStack)-1]
