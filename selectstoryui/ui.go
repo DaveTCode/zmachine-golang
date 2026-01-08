@@ -190,7 +190,7 @@ func downloadStoryList() tea.Msg {
 		if match {
 			re := regexp.MustCompile(`\d{2}-\w{3}-\d{4}`)
 			rawTimeString := s.Find("span").Text()
-			releaseDate, _ := time.Parse("01-Jan-1980", re.FindString(rawTimeString))
+			releaseDate, _ := time.Parse("02-Jan-2006", re.FindString(rawTimeString))
 			var description string
 			var ifdbEntry string
 			var ifwiki string

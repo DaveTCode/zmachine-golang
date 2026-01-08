@@ -81,13 +81,13 @@ func TestSetPropertyV1(t *testing.T) {
 
 	obj := zobject.GetObject(1, &z.Core, z.Alphabets) // Damp Cave
 
-	obj.SetProperty(11, 0xbeef, &z.Core)
+	obj.SetProperty(11, 0xbeef, &z.Core) // nolint:errcheck
 	property := obj.GetProperty(11, &z.Core)
 	if property.Data[0] != 0xbe || property.Data[1] != 0xef || property.Length != 2 {
 		t.Error("Property set didn't work on existing same length property")
 	}
 
-	obj.SetProperty(6, 0xfeed, &z.Core)
+	obj.SetProperty(6, 0xfeed, &z.Core) // nolint:errcheck
 	property = obj.GetProperty(6, &z.Core)
 	if property.Data[0] != 0xed || property.Length != 1 {
 		t.Error("Property set didn't work on short property")
@@ -189,7 +189,7 @@ func TestAttributesV1(t *testing.T) {
 	if forest.TestAttribute(1) || forest.TestAttribute(4) || forest.TestAttribute(10) {
 		t.Error("Forest should not have attributes 1,4,10 set")
 	}
-	if !(forest.TestAttribute(2) && forest.TestAttribute(3) && forest.TestAttribute(19)) {
+	if !forest.TestAttribute(2) || !forest.TestAttribute(3) || !forest.TestAttribute(19) {
 		t.Error("Forest should have attributes 2,3,19 set")
 	}
 

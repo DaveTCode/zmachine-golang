@@ -112,7 +112,7 @@ func (z *ZMachine) packedAddress(originalAddress uint32, isZString bool) uint32 
 }
 
 func (z *ZMachine) readIncPC(frame *CallStackFrame) uint8 {
-	v := z.Core.ReadByte(frame.pc)
+	v := z.Core.ReadZByte(frame.pc)
 	frame.pc++
 	return v
 }
@@ -215,7 +215,7 @@ func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<-
 
 		machine.callStack.push(CallStackFrame{
 			pc:     packedAddress + 1,
-			locals: make([]uint16, machine.Core.ReadByte(packedAddress)),
+			locals: make([]uint16, machine.Core.ReadZByte(packedAddress)),
 		})
 	} else {
 		machine.callStack.push(CallStackFrame{
@@ -238,13 +238,13 @@ func (z *ZMachine) call(opcode *Opcode, routineType RoutineType) {
 				z.reportError("CallRoutine: %v", err)
 				return
 			}
-			z.writeVariable(z.readIncPC(frame), 0, false)
+			z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
 		}
 
 		return
 	}
 
-	localVariableCount := z.Core.ReadByte(routineAddress)
+	localVariableCount := z.Core.ReadZByte(routineAddress)
 	routineAddress++
 
 	locals := make([]uint16, localVariableCount)
@@ -329,7 +329,7 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 	startingLocation := baddr1 + 1 // Skip byte which has max length of string in it
 	chrCount := uint32(0)
 	if z.Core.Version >= 5 {
-		chrCount = uint32(z.Core.ReadByte(startingLocation))
+		chrCount = uint32(z.Core.ReadZByte(startingLocation))
 		startingLocation++
 	}
 	currentLocation := startingLocation
@@ -359,18 +359,18 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 	}
 
 	// Limit words to the maximum allowed in the parse buffer (like Frotz does)
-	maxWords := int(z.Core.ReadByte(baddr2))
+	maxWords := int(z.Core.ReadZByte(baddr2))
 	if len(words) > maxWords {
 		words = words[:maxWords]
 	}
 
 	parseBufferPtr := baddr2 + 1
-	z.Core.WriteByte(parseBufferPtr, uint8(len(words)))
+	z.Core.WriteZByte(parseBufferPtr, uint8(len(words)))
 	parseBufferPtr += 1
 	for _, word := range words {
 		z.Core.WriteHalfWord(parseBufferPtr, word.dictionaryAddress)
-		z.Core.WriteByte(parseBufferPtr+2, uint8(len(word.bytes)))
-		z.Core.WriteByte(parseBufferPtr+3, uint8(word.startingLocation-baddr1))
+		z.Core.WriteZByte(parseBufferPtr+2, uint8(len(word.bytes)))
+		z.Core.WriteZByte(parseBufferPtr+3, uint8(word.startingLocation-baddr1))
 
 		parseBufferPtr += 4
 	}
@@ -388,7 +388,7 @@ func (z *ZMachine) retValue(val uint16) error {
 
 	if oldFrame.routineType == function {
 		destination := z.readIncPC(newFrame)
-		z.writeVariable(destination, val, false)
+		z.writeVariable(destination, val, false) // nolint:errcheck
 	}
 	return nil
 }
@@ -411,18 +411,13 @@ func (z *ZMachine) RemoveObject(objId uint16) {
 		} else {
 			// Non-first child case - in theory can't have a sibling if no parent so no need to do this if parent == 0
 			currObjId := oldParent.Child
-			for {
-				if currObjId == 0 {
-					break
-				}
-
+			for currObjId != 0 {
 				currObj := zobject.GetObject(currObjId, &z.Core, z.Alphabets)
 				if currObj.Sibling == object.Id {
 					currObj.SetSibling(object.Sibling, &z.Core)
 					break
-				} else {
-					currObjId = currObj.Sibling
 				}
+				currObjId = currObj.Sibling
 			}
 		}
 
@@ -467,7 +462,7 @@ func (z *ZMachine) appendText(s string) {
 	if z.streams.Memory {
 		currentMemoryStream := &z.streams.MemoryStreamData[len(z.streams.MemoryStreamData)-1]
 		for _, r := range s {
-			z.Core.WriteByte(currentMemoryStream.ptr, uint8(r))
+			z.Core.WriteZByte(currentMemoryStream.ptr, uint8(r))
 			currentMemoryStream.ptr++
 		}
 
@@ -522,16 +517,17 @@ func (z *ZMachine) read(opcode *Opcode) {
 	validTerminators := []uint8{'\n'}
 	if z.Core.Version >= 5 {
 		if z.Core.TerminatingCharTableBase != 0 {
+			z.reportError("READ: Terminating characters used but not yet implemented properly")
 			//panic("TODO - Don't use this yet so panic and fix if you find a story file with this set")
 			terminatingChrPtr := z.Core.TerminatingCharTableBase
 			for {
-				b := z.Core.ReadByte(uint32(terminatingChrPtr))
+				b := z.Core.ReadZByte(uint32(terminatingChrPtr))
 				if b == 0 {
 					break
 				} else if (b >= 129 && b <= 154) || (b >= 252 && b <= 254) {
 					validTerminators = append(validTerminators, b)
 				} else if b == 255 { // Special case means "all function keys are terminators"
-					validTerminators = []uint8{'\n', 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 252, 253, 254}
+					validTerminators = []uint8{'\n', 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 252, 253, 254} // nolint:ineffassign,staticcheck
 					break
 				}
 
@@ -549,38 +545,34 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	rawTextBytes := []byte(strings.ToLower(rawText))
 
-	bufferSize := z.Core.ReadByte(uint32(textBufferPtr))
+	bufferSize := z.Core.ReadZByte(uint32(textBufferPtr))
 	textBufferPtr++
 
 	// Skip bytes already in the buffer on v5+
 	if z.Core.Version >= 5 {
-		existingBytes := z.Core.ReadByte(uint32(textBufferPtr))
+		existingBytes := z.Core.ReadZByte(uint32(textBufferPtr))
 		textBufferPtr += 1 + uint16(existingBytes)
 	}
 
 	ix := 0
-	for {
-		if ix > int(bufferSize) || ix >= len(rawTextBytes) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
-			break // Too many characters provided
-		}
-
+	for ix <= int(bufferSize) && ix < len(rawTextBytes) { // TODO - Not 100% sure on whether this is >= or some other off by one value. Docs are unclear
 		chr := rawTextBytes[ix]
 
 		if (chr >= 32 && chr <= 126) || (chr >= 155 && chr <= 251) {
-			z.Core.WriteByte(uint32(textBufferPtr+uint16(ix)), chr)
+			z.Core.WriteZByte(uint32(textBufferPtr+uint16(ix)), chr)
 		} else {
-			z.Core.WriteByte(uint32(textBufferPtr+uint16(ix)), 32)
+			z.Core.WriteZByte(uint32(textBufferPtr+uint16(ix)), 32)
 		}
 
 		ix++
 	}
 
 	// Terminate with a null byte
-	z.Core.WriteByte(uint32(textBufferPtr+uint16(ix)), 0)
+	z.Core.WriteZByte(uint32(textBufferPtr+uint16(ix)), 0)
 
 	// Need to store the number of bytes in total in v5+ as that's used to determine end point of the string
 	if z.Core.Version >= 5 {
-		z.Core.WriteByte(uint32(opcode.operands[0].Value(z)+1), uint8(ix))
+		z.Core.WriteZByte(uint32(opcode.operands[0].Value(z)+1), uint8(ix))
 	}
 
 	// TODO - Can this ever really be zero?
@@ -594,7 +586,8 @@ func (z *ZMachine) read(opcode *Opcode) {
 			z.reportError("READ: %v", err)
 			return
 		}
-		z.writeVariable(z.readIncPC(frame), 13, false) // TODO - Should be the typed terminating char
+		//  TODO - Should be the typed terminating char
+		z.writeVariable(z.readIncPC(frame), 13, false) // nolint:errcheck
 	}
 }
 
@@ -639,10 +632,7 @@ func (z *ZMachine) Run() {
 	// Initialise whatever is listening by sending inital versions of the screen model
 	z.outputChannel <- z.screenModel
 
-	for {
-		if !z.StepMachine() {
-			break
-		}
+	for z.StepMachine() {
 	}
 
 	z.outputChannel <- Quit(true)
@@ -713,7 +703,7 @@ func (z *ZMachine) StepMachine() bool {
 				// Tag the current frame with a unique frame pointer and store it
 				z.nextFramePointer++
 				frame.framePointer = uint32(z.nextFramePointer)
-				z.writeVariable(z.readIncPC(frame), z.nextFramePointer, false)
+				z.writeVariable(z.readIncPC(frame), z.nextFramePointer, false) // nolint:errcheck
 			}
 
 		case 10: // QUIT
@@ -728,7 +718,7 @@ func (z *ZMachine) StepMachine() bool {
 			actualChecksum := uint16(0)
 
 			for ix := uint32(0x40); ix < uint32(fileLength); ix++ {
-				actualChecksum += uint16(z.Core.ReadByte(ix))
+				actualChecksum += uint16(z.Core.ReadZByte(ix))
 			}
 
 			if !z.handleBranch(frame, checksum == actualChecksum || true) { // TODO - Verify doesn't really work but also not clear why we'd ever want to fail a verify test
@@ -757,7 +747,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.warnOnce("get_sibling", "Warning: @get_sibling called with object 0 (PC = %x)", opcode.pc)
 			}
 			sibling := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Sibling
-			z.writeVariable(z.readIncPC(frame), sibling, false)
+			z.writeVariable(z.readIncPC(frame), sibling, false) // nolint:errcheck
 
 			if !z.handleBranch(frame, sibling != 0) {
 				return false
@@ -769,7 +759,7 @@ func (z *ZMachine) StepMachine() bool {
 				z.warnOnce("get_child", "Warning: @get_child called with object 0 (PC = %x)", opcode.pc)
 			}
 			child := zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Child
-			z.writeVariable(z.readIncPC(frame), child, false)
+			z.writeVariable(z.readIncPC(frame), child, false) // nolint:errcheck
 
 			if !z.handleBranch(frame, child != 0) {
 				return false
@@ -780,21 +770,20 @@ func (z *ZMachine) StepMachine() bool {
 			if objId == 0 {
 				z.warnOnce("get_parent", "Warning: @get_parent called with object 0 (PC = %x)", opcode.pc)
 			}
-			z.writeVariable(z.readIncPC(frame), zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Parent, false)
+			z.writeVariable(z.readIncPC(frame), zobject.GetObjectSafe(objId, &z.Core, z.Alphabets).Parent, false) // nolint:errcheck
 
 		case 4: // GET_PROP_LEN
 			addr := opcode.operands[0].Value(z)
-			z.writeVariable(z.readIncPC(frame), zobject.GetPropertyLength(&z.Core, uint32(addr)), false)
-
+			z.writeVariable(z.readIncPC(frame), zobject.GetPropertyLength(&z.Core, uint32(addr)), false) // nolint:errcheck
 		case 5: // INC
 			variable := uint8(opcode.operands[0].Value(z))
 			val, _ := z.readVariable(variable, true)
-			z.writeVariable(variable, val+1, true)
+			z.writeVariable(variable, val+1, true) // nolint:errcheck
 
 		case 6: // DEC
 			variable := uint8(opcode.operands[0].Value(z))
 			val, _ := z.readVariable(variable, true)
-			z.writeVariable(variable, val-1, true)
+			z.writeVariable(variable, val-1, true) // nolint:errcheck
 
 		case 7: // PRINT_ADDR
 			address := opcode.operands[0].Value(z)
@@ -834,12 +823,12 @@ func (z *ZMachine) StepMachine() bool {
 		case 14: // LOAD
 			value := opcode.operands[0].Value(z)
 			val, _ := z.readVariable(uint8(value), true)
-			z.writeVariable(z.readIncPC(frame), val, false)
+			z.writeVariable(z.readIncPC(frame), val, false) // nolint:errcheck
 
 		case 15: // NOT or CALL_1n
 			if z.Core.Version < 5 {
 				val := opcode.operands[0].Value(z)
-				z.writeVariable(z.readIncPC(frame), ^val, false)
+				z.writeVariable(z.readIncPC(frame), ^val, false) // nolint:errcheck
 			} else {
 				z.call(&opcode, procedure)
 			}
@@ -882,7 +871,7 @@ func (z *ZMachine) StepMachine() bool {
 			variable := uint8(opcode.operands[0].Value(z))
 			val, _ := z.readVariable(variable, true)
 			newValue := int16(val) - 1
-			z.writeVariable(variable, uint16(newValue), true)
+			z.writeVariable(variable, uint16(newValue), true) // nolint:errcheck
 			branch := int16(newValue) < int16(opcode.operands[1].Value(z))
 
 			if !z.handleBranch(frame, branch) {
@@ -893,7 +882,7 @@ func (z *ZMachine) StepMachine() bool {
 			variable := uint8(opcode.operands[0].Value(z))
 			val, _ := z.readVariable(variable, true)
 			newValue := val + 1
-			z.writeVariable(variable, newValue, true)
+			z.writeVariable(variable, newValue, true) // nolint:errcheck
 			branch := int16(newValue) > int16(opcode.operands[1].Value(z))
 
 			if !z.handleBranch(frame, branch) {
@@ -920,10 +909,10 @@ func (z *ZMachine) StepMachine() bool {
 			}
 
 		case 8: // OR
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)|opcode.operands[1].Value(z), false)
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)|opcode.operands[1].Value(z), false) // nolint:errcheck
 
 		case 9: // AND
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z), false)
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)&opcode.operands[1].Value(z), false) // nolint:errcheck
 
 		case 10: // TEST_ATTR
 			objId := opcode.operands[0].Value(z)
@@ -954,22 +943,22 @@ func (z *ZMachine) StepMachine() bool {
 			}
 
 		case 13: // STORE
-			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z), true)
+			z.writeVariable(uint8(opcode.operands[0].Value(z)), opcode.operands[1].Value(z), true) // nolint:errcheck
 
 		case 14: // INSERT_OBJ
 			z.MoveObject(opcode.operands[0].Value(z), opcode.operands[1].Value(z))
 
 		case 15: // LOADW
-			z.writeVariable(z.readIncPC(frame), z.Core.ReadHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))), false)
+			z.writeVariable(z.readIncPC(frame), z.Core.ReadHalfWord(uint32(opcode.operands[0].Value(z)+2*opcode.operands[1].Value(z))), false) // nolint:errcheck
 
 		case 16: // LOADB
-			z.writeVariable(z.readIncPC(frame), uint16(z.Core.ReadByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))), false)
+			z.writeVariable(z.readIncPC(frame), uint16(z.Core.ReadZByte(uint32(opcode.operands[0].Value(z)+opcode.operands[1].Value(z)))), false) // nolint:errcheck
 
 		case 17: // GET_PROP
 			objId := opcode.operands[0].Value(z)
 			if objId == 0 {
 				z.warnOnce("get_prop", "Warning: @get_prop called with object 0 (PC = %x)", opcode.pc)
-				z.writeVariable(z.readIncPC(frame), 0, false)
+				z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
 			} else {
 				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
 				prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
@@ -982,44 +971,44 @@ func (z *ZMachine) StepMachine() bool {
 					z.warnOnce("get_prop_prop_len", "Warning: @get_prop called with object %d property %d which has length %d (PC = %x); only first two bytes returned", objId, opcode.operands[1].Value(z), len(prop.Data), opcode.pc)
 				}
 
-				z.writeVariable(z.readIncPC(frame), value, false)
+				z.writeVariable(z.readIncPC(frame), value, false) // nolint:errcheck
 			}
 
 		case 18: // GET_PROP_ADDR
 			objId := opcode.operands[0].Value(z)
 			if objId == 0 {
 				z.warnOnce("get_prop_addr", "Warning: @get_prop_addr called with object 0 (PC = %x)", opcode.pc)
-				z.writeVariable(z.readIncPC(frame), 0, false)
+				z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
 			} else {
 				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
 				prop := obj.GetProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
-				z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false)
+				z.writeVariable(z.readIncPC(frame), uint16(prop.DataAddress), false) // nolint:errcheck
 			}
 
 		case 19: // GET_NEXT_PROP
 			objId := opcode.operands[0].Value(z)
 			if objId == 0 {
 				z.warnOnce("get_next_prop", "Warning: @get_next_prop called with object 0 (PC = %x)", opcode.pc)
-				z.writeVariable(z.readIncPC(frame), 0, false)
+				z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
 			} else {
 				obj := zobject.GetObject(objId, &z.Core, z.Alphabets)
 				nextProp, err := obj.GetNextProperty(uint8(opcode.operands[1].Value(z)), &z.Core)
 				if err != nil {
 					z.warnOnce("get_next_prop_invalid", "Warning: @get_next_prop error: %v (PC = %x)", err, opcode.pc)
-					z.writeVariable(z.readIncPC(frame), 0, false)
+					z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
 				} else {
-					z.writeVariable(z.readIncPC(frame), uint16(nextProp), false)
+					z.writeVariable(z.readIncPC(frame), uint16(nextProp), false) // nolint:errcheck
 				}
 			}
 
 		case 20: // ADD
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z), false)
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)+opcode.operands[1].Value(z), false) // nolint:errcheck
 
 		case 21: // SUB
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)-opcode.operands[1].Value(z), false)
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)-opcode.operands[1].Value(z), false) // nolint:errcheck
 
 		case 22: // MUL
-			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)*opcode.operands[1].Value(z), false)
+			z.writeVariable(z.readIncPC(frame), opcode.operands[0].Value(z)*opcode.operands[1].Value(z), false) // nolint:errcheck
 
 		case 23: // DIV
 			numerator := int16(opcode.operands[0].Value(z))
@@ -1027,7 +1016,7 @@ func (z *ZMachine) StepMachine() bool {
 			if denominator == 0 {
 				return z.reportError("Division by zero")
 			}
-			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator), false)
+			z.writeVariable(z.readIncPC(frame), uint16(numerator/denominator), false) // nolint:errcheck
 
 		case 24: // MOD
 			numerator := int16(opcode.operands[0].Value(z))
@@ -1035,7 +1024,7 @@ func (z *ZMachine) StepMachine() bool {
 			if denominator == 0 {
 				return z.reportError("Modulo by zero")
 			}
-			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator), false)
+			z.writeVariable(z.readIncPC(frame), uint16(numerator%denominator), false) // nolint:errcheck
 
 		case 25: // call_2s
 			if z.Core.Version < 4 {
@@ -1118,7 +1107,7 @@ func (z *ZMachine) StepMachine() bool {
 					result = num >> (-1 * places)
 				}
 
-				z.writeVariable(z.readIncPC(frame), result, false)
+				z.writeVariable(z.readIncPC(frame), result, false) // nolint:errcheck
 			case 0x03: // ART_SHIFT
 				num := int16(opcode.operands[0].Value(z))
 				places := int16(opcode.operands[1].Value(z))
@@ -1130,7 +1119,7 @@ func (z *ZMachine) StepMachine() bool {
 					result = uint16(num >> (-1 * places))
 				}
 
-				z.writeVariable(z.readIncPC(frame), result, false)
+				z.writeVariable(z.readIncPC(frame), result, false) // nolint:errcheck
 
 			case 0x04: // SET_FONT
 				requestFont := Font(opcode.operands[0].Value(z))
@@ -1159,12 +1148,13 @@ func (z *ZMachine) StepMachine() bool {
 					result = 0
 				}
 
-				z.writeVariable(z.readIncPC(frame), result, false)
+				z.writeVariable(z.readIncPC(frame), result, false) // nolint:errcheck
 				z.outputChannel <- z.screenModel
 
 			case 0x09: // SAVE_UNDO
 				z.saveUndo()
-				z.writeVariable(z.readIncPC(frame), uint16(1), false) // Save always succeeds in this environment
+				// Save always succeeds
+				z.writeVariable(z.readIncPC(frame), uint16(1), false) // nolint:errcheck
 
 			case 0x0a: // RESTORE_UNDO
 				response := z.restoreUndo()
@@ -1173,7 +1163,8 @@ func (z *ZMachine) StepMachine() bool {
 				if err != nil {
 					return z.reportError("RESTORE_UNDO: %v", err)
 				}
-				z.writeVariable(z.readIncPC(frame), response, false) // Restore always says that it's done and continues from previous save
+				// Restore always says that it's done and continues from previous save
+				z.writeVariable(z.readIncPC(frame), response, false) // nolint:errcheck
 
 			case 0x0b: // PRINT_UNICODE
 				chr := opcode.operands[0].Value(z)
@@ -1183,7 +1174,7 @@ func (z *ZMachine) StepMachine() bool {
 				chr := opcode.operands[0].Value(z)
 				// What unicode characters _can_ i write? TODO
 				if chr != 0 {
-					z.writeVariable(z.readIncPC(frame), 0b11, false)
+					z.writeVariable(z.readIncPC(frame), 0b11, false) // nolint:errcheck
 				}
 
 			case 0x0d: // SET_TRUE_COLOUR
@@ -1248,7 +1239,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 2: // STOREB
 				address := opcode.operands[0].Value(z) + opcode.operands[1].Value(z)
-				z.Core.WriteByte(uint32(address), uint8(opcode.operands[2].Value(z)))
+				z.Core.WriteZByte(uint32(address), uint8(opcode.operands[2].Value(z)))
 
 			case 3: // PUT_PROP
 				objId := opcode.operands[0].Value(z)
@@ -1288,7 +1279,7 @@ func (z *ZMachine) StepMachine() bool {
 					result = uint16(z.rng.Int31n(int32(n))) + 1
 				}
 
-				z.writeVariable(z.readIncPC(frame), result, false)
+				z.writeVariable(z.readIncPC(frame), result, false) // nolint:errcheck
 			case 8: // PUSH
 				frame.push(opcode.operands[0].Value(z))
 
@@ -1298,9 +1289,9 @@ func (z *ZMachine) StepMachine() bool {
 						return z.reportError("V6 PULL with user stack not implemented")
 					}
 					value := frame.pop(z)
-					z.writeVariable(z.readIncPC(frame), value, false)
+					z.writeVariable(z.readIncPC(frame), value, false) // nolint:errcheck
 				} else {
-					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(z), true)
+					z.writeVariable(uint8(opcode.operands[0].Value(z)), frame.pop(z), true) // nolint:errcheck
 				}
 
 			case 10: // SPLIT_WINDOW
@@ -1493,7 +1484,7 @@ func (z *ZMachine) StepMachine() bool {
 				if len(rawText) > 0 {
 					charCode = uint16(rawText[0])
 				}
-				z.writeVariable(z.readIncPC(frame), charCode, false)
+				z.writeVariable(z.readIncPC(frame), charCode, false) // nolint:errcheck
 
 			case 23: // SCAN_TABLE
 				test := opcode.operands[0].Value(z)
@@ -1507,7 +1498,7 @@ func (z *ZMachine) StepMachine() bool {
 
 				result := ztable.ScanTable(&z.Core, test, uint32(tableAddress), length, form)
 
-				z.writeVariable(z.readIncPC(frame), uint16(result), false)
+				z.writeVariable(z.readIncPC(frame), uint16(result), false) // nolint:errcheck
 
 				if !z.handleBranch(frame, result != 0) {
 					return false
@@ -1515,7 +1506,7 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 24: // NOT
 				val := opcode.operands[0].Value(z)
-				z.writeVariable(z.readIncPC(frame), ^val, false)
+				z.writeVariable(z.readIncPC(frame), ^val, false) // nolint:errcheck
 
 			case 25: // CALL_VN
 				z.call(&opcode, procedure)
@@ -1536,7 +1527,7 @@ func (z *ZMachine) StepMachine() bool {
 					dictionaryToUse = dictionary.ParseDictionary(uint32(dictionaryAddress), &z.Core, z.Alphabets)
 
 					if opcode.numOperands == 4 {
-						flag = opcode.operands[3].Value(z) != 0
+						flag = opcode.operands[3].Value(z) != 0 // nolint:ineffassign,staticcheck
 
 						return z.reportError("TOKENISE with 4th operand not implemented")
 					}

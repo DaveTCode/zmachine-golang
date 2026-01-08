@@ -132,7 +132,7 @@ func runAllGames(storiesDir, outputDir string) {
 		}
 		screenshots.WriteString("\n")
 	}
-	os.WriteFile(screenshotsPath, []byte(screenshots.String()), 0644)
+	os.WriteFile(screenshotsPath, []byte(screenshots.String()), 0644) // nolint:errcheck
 }
 
 func runSingleGame(gamePath string) {

@@ -23,7 +23,7 @@ func GetPropertyLength(core *zcore.Core, addr uint32) uint16 {
 		return 0 // Special case required by some story files
 	}
 
-	prevByte := core.ReadByte(addr - 1)
+	prevByte := core.ReadZByte(addr - 1)
 	if core.Version <= 3 {
 		return uint16(prevByte>>5) + 1
 	} else if prevByte&0b1000_0000 != 0 {
@@ -37,20 +37,16 @@ func GetPropertyLength(core *zcore.Core, addr uint32) uint16 {
 }
 
 func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) error {
-	objectNameLength := core.ReadByte(uint32(o.PropertyPointer))
+	objectNameLength := core.ReadZByte(uint32(o.PropertyPointer))
 	currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 
-	for {
-		if core.ReadByte(currentPtr) == 0 {
-			break
-		}
-
+	for core.ReadZByte(currentPtr) != 0 {
 		property := o.GetPropertyByAddress(currentPtr, core)
 
 		if property.Id == propertyId {
 			switch property.Length {
 			case 1:
-				core.WriteByte(currentPtr+1, uint8(value))
+				core.WriteZByte(currentPtr+1, uint8(value))
 			case 2:
 				core.WriteHalfWord(currentPtr+1, value)
 			default:
@@ -68,15 +64,11 @@ func (o *Object) SetProperty(propertyId uint8, value uint16, core *zcore.Core) e
 }
 
 func (o *Object) GetProperty(propertyId uint8, core *zcore.Core) Property {
-	objectNameLength := core.ReadByte(uint32(o.PropertyPointer))
+	objectNameLength := core.ReadZByte(uint32(o.PropertyPointer))
 	currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 
-	for {
-		// Property table ends with null terminator
-		if core.ReadByte(currentPtr) == 0 {
-			break
-		}
-
+	// Property table ends with null terminator
+	for core.ReadZByte(currentPtr) != 0 {
 		property := o.GetPropertyByAddress(currentPtr, core)
 
 		if property.Id == propertyId {
@@ -95,14 +87,14 @@ func (o *Object) GetProperty(propertyId uint8, core *zcore.Core) Property {
 }
 
 func (o *Object) GetPropertyByAddress(propertyAddr uint32, core *zcore.Core) Property {
-	propertySizeByte := core.ReadByte(propertyAddr)
+	propertySizeByte := core.ReadZByte(propertyAddr)
 	length := (propertySizeByte >> 5) + 1
 	id := propertySizeByte & 0b1_1111
 	propertyHeaderLength := uint8(1)
 
 	if core.Version >= 4 {
 		if propertySizeByte>>7 == 1 {
-			length = core.ReadByte(propertyAddr+1) & 0b11_1111
+			length = core.ReadZByte(propertyAddr+1) & 0b11_1111
 
 			// 12.4.2.1.1
 			// [1.0] A value of 0 as property data length (in the second byte) should be interpreted as a length of 64. (Inform can compile such properties.)
@@ -131,11 +123,11 @@ func (o *Object) GetPropertyByAddress(propertyAddr uint32, core *zcore.Core) Pro
 
 func (o *Object) GetNextProperty(propertyId uint8, core *zcore.Core) (uint8, error) {
 	if propertyId == 0 { // Special case, means get first property
-		if core.ReadByte(uint32(o.PropertyPointer)) == 0 {
+		if core.ReadZByte(uint32(o.PropertyPointer)) == 0 {
 			return 0, nil // Special case, no next property means return 0
 		}
 
-		objectNameLength := core.ReadByte(uint32(o.PropertyPointer))
+		objectNameLength := core.ReadZByte(uint32(o.PropertyPointer))
 		currentPtr := uint32(o.PropertyPointer + 1 + uint16(objectNameLength)*2)
 		return o.GetPropertyByAddress(currentPtr, core).Id, nil
 	}

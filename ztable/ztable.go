@@ -7,7 +7,7 @@ import (
 )
 
 func PrintTable(core *zcore.Core, baddr uint32, width uint16, height uint16, skip uint16) string {
-	numBytes := core.ReadByte(baddr)
+	numBytes := core.ReadZByte(baddr)
 	s := strings.Builder{}
 
 	for i := uint16(0); i < uint16(numBytes); i++ {
@@ -24,7 +24,7 @@ func PrintTable(core *zcore.Core, baddr uint32, width uint16, height uint16, ski
 			}
 		}
 
-		s.WriteByte(core.ReadByte(baddr + uint32(i) + uint32(skip*row)))
+		s.WriteByte(core.ReadZByte(baddr + uint32(i) + uint32(skip*row)))
 	}
 
 	return s.String()
@@ -40,7 +40,7 @@ func ScanTable(core *zcore.Core, test uint16, baddr uint32, length uint16, form 
 
 	for i := uint16(0); i < length; i++ {
 		if !checkWord {
-			if uint16(core.ReadByte(ptr)) == test { // Note the scaling up of the memory value here to u16 is because the test value can be larger and that should rightly not be found
+			if uint16(core.ReadZByte(ptr)) == test { // Note the scaling up of the memory value here to u16 is because the test value can be larger and that should rightly not be found
 				return ptr
 			}
 		} else {
@@ -64,7 +64,7 @@ func CopyTable(core *zcore.Core, first uint16, second uint16, size int16) {
 	switch {
 	case second == 0: // special case used to zero a table
 		for i := uint16(0); i < sizeAbs; i++ {
-			core.WriteByte(uint32(first+i), 0)
+			core.WriteZByte(uint32(first+i), 0)
 		}
 
 	case size >= 0: // Use original values of first table don't allow mid-copy corruption
@@ -74,7 +74,7 @@ func CopyTable(core *zcore.Core, first uint16, second uint16, size int16) {
 
 	case size < 0: // Allow corruption of existing table as copy occurs
 		for i := uint16(0); i < sizeAbs; i++ {
-			core.WriteByte(uint32(second+i), core.ReadByte(uint32(first+i)))
+			core.WriteZByte(uint32(second+i), core.ReadZByte(uint32(first+i)))
 		}
 	}
 }

@@ -108,7 +108,7 @@ func ZsciiToUnicode(zchr uint8, core *zcore.Core) (rune, bool) {
 func parseUnicodeTranslationTable(core *zcore.Core) map[rune]uint8 {
 	var result = make(map[rune]uint8, 0)
 
-	numUnicodeExtensions := core.ReadByte(uint32(core.UnicodeExtensionTableBaseAddress))
+	numUnicodeExtensions := core.ReadZByte(uint32(core.UnicodeExtensionTableBaseAddress))
 	startAddress := int(core.UnicodeExtensionTableBaseAddress + 1)
 	for i := 0; i < int(numUnicodeExtensions); i++ {
 		result[rune(core.ReadHalfWord(uint32(i*2+startAddress)))] = uint8(i + 155)
