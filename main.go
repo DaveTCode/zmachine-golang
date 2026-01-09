@@ -185,7 +185,8 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			os.Exit(0)
 		}
 
-		if m.appState == appWaitingForCharacter {
+		switch m.appState {
+		case appWaitingForCharacter:
 			m.appState = appRunning
 			if len(msg.Runes) > 0 {
 				m.sendChannel <- zmachine.InputResponse{Text: string(msg.Runes[0]), TerminatingKey: 0}
@@ -194,10 +195,8 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				keyCode := keyToZChar(msg)
 				m.sendChannel <- zmachine.InputResponse{Text: "", TerminatingKey: keyCode}
 			}
-		} else if m.appState == appWaitingForInput {
-			// Check if this key is a valid terminator
-			keyCode := keyToZChar(msg)
-			if msg.Type == tea.KeyEnter || isValidTerminator(keyCode, m.validTerminators) {
+		case appWaitingForInput:
+			if msg.Type == tea.KeyEnter { // TODO - Some versions have different keys which trigger this
 				m.appState = appRunning
 				m.lowerWindowText += m.inputBox.Value() + "\n"
 				terminatingKey := uint8(13) // Default to carriage return
