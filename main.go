@@ -22,15 +22,81 @@ var (
 )
 
 type textUpdateMessage string
-type stateUpdateMessage zmachine.StateChangeRequest
 type eraseLineRequest zmachine.EraseLineRequest
 type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
+type inputRequestMessage zmachine.InputRequest
 type restartRequest bool
 type runtimeErrorMessage zmachine.RuntimeError
 type warningMessage zmachine.Warning
 type soundEffectRequest zmachine.SoundEffectRequest
+
+// keyToZChar maps Bubble Tea key messages to Z-machine character codes.
+// Function keys are mapped according to the Z-machine spec section 10.5.2.1:
+//   - 129-132: Cursor keys (up, down, left, right)
+//   - 133-144: Function keys F1-F12
+//   - 145-154: Keypad 0-9
+//   - 252: Menu click
+//   - 253: Mouse double-click
+//   - 254: Mouse single-click
+func keyToZChar(msg tea.KeyMsg) uint8 {
+	switch msg.Type {
+	case tea.KeyUp:
+		return 129
+	case tea.KeyDown:
+		return 130
+	case tea.KeyLeft:
+		return 131
+	case tea.KeyRight:
+		return 132
+	case tea.KeyF1:
+		return 133
+	case tea.KeyF2:
+		return 134
+	case tea.KeyF3:
+		return 135
+	case tea.KeyF4:
+		return 136
+	case tea.KeyF5:
+		return 137
+	case tea.KeyF6:
+		return 138
+	case tea.KeyF7:
+		return 139
+	case tea.KeyF8:
+		return 140
+	case tea.KeyF9:
+		return 141
+	case tea.KeyF10:
+		return 142
+	case tea.KeyF11:
+		return 143
+	case tea.KeyF12:
+		return 144
+	case tea.KeyEscape:
+		return 27 // ESC character
+	case tea.KeyEnter:
+		return 13 // Carriage return
+	case tea.KeyDelete:
+		return 8 // Delete/backspace
+	default:
+		return 0
+	}
+}
+
+// isValidTerminator checks if a key code is in the list of valid terminators
+func isValidTerminator(keyCode uint8, validTerminators []uint8) bool {
+	if keyCode == 0 {
+		return false
+	}
+	for _, t := range validTerminators {
+		if t == keyCode {
+			return true
+		}
+	}
+	return false
+}
 
 type runningStoryState int
 
@@ -42,7 +108,7 @@ const (
 
 type runStoryModel struct {
 	outputChannel            <-chan any
-	sendChannel              chan<- string
+	sendChannel              chan<- zmachine.InputResponse
 	zMachine                 *zmachine.ZMachine
 	romBytes                 []byte
 	statusBar                zmachine.StatusBar
@@ -52,6 +118,7 @@ type runStoryModel struct {
 	upperWindowText          []string
 	upperWindowStyle         [][]lipgloss.Style
 	appState                 runningStoryState
+	validTerminators         []uint8 // Valid terminating characters for current input
 	inputBox                 textinput.Model
 	width                    int
 	height                   int
@@ -121,16 +188,23 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.appState == appWaitingForCharacter {
 			m.appState = appRunning
 			if len(msg.Runes) > 0 {
-				m.sendChannel <- string(msg.Runes[0])
+				m.sendChannel <- zmachine.InputResponse{Text: string(msg.Runes[0]), TerminatingKey: 0}
 			} else {
-				m.sendChannel <- string("\n") // TODO - Maybe ok? Does it really matter if escape was pressed?
+				// Map special keys to Z-machine character codes
+				keyCode := keyToZChar(msg)
+				m.sendChannel <- zmachine.InputResponse{Text: "", TerminatingKey: keyCode}
 			}
-		} else {
-			switch msg.Type {
-			case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
+		} else if m.appState == appWaitingForInput {
+			// Check if this key is a valid terminator
+			keyCode := keyToZChar(msg)
+			if msg.Type == tea.KeyEnter || isValidTerminator(keyCode, m.validTerminators) {
 				m.appState = appRunning
 				m.lowerWindowText += m.inputBox.Value() + "\n"
-				m.sendChannel <- m.inputBox.Value()
+				terminatingKey := uint8(13) // Default to carriage return
+				if msg.Type != tea.KeyEnter {
+					terminatingKey = keyCode
+				}
+				m.sendChannel <- zmachine.InputResponse{Text: m.inputBox.Value(), TerminatingKey: terminatingKey}
 				m.inputBox.SetValue("")
 			}
 		}
@@ -183,10 +257,13 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, waitForInterpreter(m.outputChannel)
 
-	case stateUpdateMessage:
-		switch zmachine.StateChangeRequest(msg) {
-		case zmachine.WaitForInput:
-			m.appState = appWaitingForInput
+	case inputRequestMessage:
+		m.appState = appWaitingForInput
+		m.validTerminators = msg.ValidTerminators
+		return m, waitForInterpreter(m.outputChannel)
+
+	case zmachine.StateChangeRequest:
+		switch msg {
 		case zmachine.WaitForCharacter:
 			m.appState = appWaitingForCharacter
 		case zmachine.Running:
@@ -244,7 +321,7 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case restartRequest:
 		// Reload the ROM from stored bytes
 		zMachineOutputChannel := make(chan any)
-		zMachineInputChannel := make(chan string)
+		zMachineInputChannel := make(chan zmachine.InputResponse)
 		m.zMachine = zmachine.LoadRom(m.romBytes, zMachineInputChannel, zMachineOutputChannel)
 		m.outputChannel = zMachineOutputChannel
 		m.sendChannel = zMachineInputChannel
@@ -458,8 +535,10 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 	return func() tea.Msg {
 		msg := <-sub
 		switch msg := msg.(type) {
+		case zmachine.InputRequest:
+			return inputRequestMessage(msg)
 		case zmachine.StateChangeRequest:
-			return stateUpdateMessage(msg)
+			return msg // Pass through directly, handled in Update
 		case zmachine.EraseWindowRequest:
 			return eraseWindowRequest(msg)
 		case zmachine.StatusBar:
@@ -487,7 +566,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string, outputChannel <-chan any, romBytes []byte) tea.Model {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- zmachine.InputResponse, outputChannel <-chan any, romBytes []byte) tea.Model {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -501,6 +580,7 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- string
 		zMachine:                zMachine,
 		romBytes:                romBytes,
 		appState:                appRunning,
+		validTerminators:        []uint8{13}, // Default to just Enter
 		inputBox:                ti,
 		upperWindowStyleCurrent: lipgloss.NewStyle(),
 		lowerWindowStyle:        lipgloss.NewStyle(),
@@ -518,7 +598,7 @@ func main() {
 			panic(err)
 		}
 		zMachineOutputChannel := make(chan any)
-		zMachineInputChannel := make(chan string)
+		zMachineInputChannel := make(chan zmachine.InputResponse)
 		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
 
 		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel, romFileBytes)

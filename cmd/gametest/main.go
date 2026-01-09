@@ -191,7 +191,7 @@ func runGameTest(gamePath string) (result TestResult) {
 
 	// Create channels
 	outputChannel := make(chan any, 100)
-	inputChannel := make(chan string, 10)
+	inputChannel := make(chan zmachine.InputResponse, 10)
 
 	// Load the Z-machine
 	z := zmachine.LoadRom(storyBytes, inputChannel, outputChannel)
@@ -199,21 +199,196 @@ func runGameTest(gamePath string) (result TestResult) {
 	// Commands to try - these are common adventure game commands that should
 	// exercise various parts of the interpreter
 	commands := []string{
-		" ", // Just space
-		" ", // Just space
-		" ", // Just space
-		" ", // Just space
-		" ", // Just space
-		"",  // Just enter
-		"",  // Just enter
-		"",  // Just enter
-		"",  // Just enter
-		"",  // Just enter
-		"examine self",
+		// Initial prompts - some games need multiple enters/spaces to start
+		" ",
+		" ",
+		"",
+		"",
+		"",
+
+		// Yes/No responses (common for game prompts)
+		"y",
+		"yes",
+		"n",
+		"no",
+
+		// Help and meta commands
 		"help",
+		"about",
+		"info",
+		"hint",
+		"hints",
+		"score",
+		"version",
+		"credits",
+		"verbose",
+		"brief",
+		"superbrief",
+
+		// Movement commands
 		"north",
+		"south",
+		"east",
+		"west",
+		"northeast",
+		"northwest",
+		"southeast",
+		"southwest",
+		"up",
+		"down",
+		"in",
+		"out",
+		"enter",
+		"exit",
+		"go north",
+		"n",
+		"s",
+		"e",
+		"w",
+		"ne",
+		"nw",
+		"se",
+		"sw",
+		"u",
+		"d",
+
+		// Looking and examining
+		"look",
+		"l",
+		"look around",
+		"examine self",
+		"examine me",
+		"x me",
+		"inventory",
+		"i",
+		"look at floor",
+		"examine room",
+		"search",
+		"search room",
+
+		// Object interaction
 		"take all",
+		"get all",
+		"drop all",
+		"take everything",
+		"pick up all",
+		"put all in bag",
+		"open door",
+		"close door",
+		"open all",
+		"close all",
+		"push button",
+		"pull lever",
+		"turn knob",
+		"move rug",
+		"lift rug",
+		"read sign",
+		"read book",
+		"read note",
+		"read all",
+
+		// Common object names
+		"take lamp",
+		"take sword",
+		"take key",
+		"take book",
+		"take coin",
+		"take food",
+		"take bottle",
+		"drop lamp",
+		"drop sword",
+		"drop key",
+
+		// Using objects
+		"use key",
+		"use lamp",
+		"light lamp",
+		"turn on lamp",
+		"turn off lamp",
+		"eat food",
+		"drink water",
+		"wear cloak",
+		"remove cloak",
+
+		// Combat and interaction with NPCs
+		"attack troll",
+		"kill troll with sword",
+		"hit monster",
+		"talk to man",
+		"ask man about key",
+		"tell man about treasure",
+		"give coin to man",
+		"show book to woman",
+		"follow thief",
+
+		// Complex commands
+		"put key in lock",
+		"unlock door with key",
+		"open door with key",
+		"tie rope to hook",
+		"throw ball at window",
+		"climb tree",
+		"climb up",
+		"climb down",
+		"jump",
+		"swim",
+		"wait",
+		"z",
+		"sleep",
+		"wake up",
+		"stand",
+		"sit",
+		"lie down",
+
+		// Container manipulation
+		"open box",
+		"close box",
+		"look in box",
+		"search box",
+		"empty bag",
+		"fill bottle with water",
+
+		// Unusual inputs to stress test parser
+		"xyzzy",
+		"plugh",
+		"plover",
+		"frotz",
+		"hello",
+		"hello sailor",
+		"damn",
+		"pray",
+		"sing",
+		"dance",
+		"think",
+		"smell",
+		"listen",
+		"taste wall",
+		"touch wall",
+		"feel wall",
+
+		// Numbers (some games ask for numeric input)
+		"0",
+		"1",
+		"42",
+		"100",
+		"999",
+
+		// Edge cases
+		"   ", // Just spaces
+		"a",   // Single letter
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // Long input
+		"take the small brass lamp from the table",                                         // Long command
+		"n. n. n. e. e. s.", // Multiple commands (some parsers support this)
+		"north then east",
+
+		// Save/restore/quit (usually intercepted)
+		"save",
+		"restore",
+		"load",
+		"restart",
+		"undo",
 		"quit",
+		"q",
 	}
 	commandIndex := 0
 
@@ -244,11 +419,20 @@ func runGameTest(gamePath string) (result TestResult) {
 				// Collect text output
 				lines := strings.Split(v, "\n")
 				screenOutput = append(screenOutput, lines...)
+			case zmachine.InputRequest:
+				// Game is waiting for line input - send next command
+				if commandIndex < len(commands) {
+					inputChannel <- zmachine.InputResponse{Text: commands[commandIndex], TerminatingKey: 13}
+					commandIndex++
+				} else {
+					// We've sent all commands, stop collecting
+					collectOutput = false
+				}
 			case zmachine.StateChangeRequest:
-				if v == zmachine.WaitForInput || v == zmachine.WaitForCharacter {
-					// Game is waiting for input - send next command
+				if v == zmachine.WaitForCharacter {
+					// Game is waiting for character input - send next command
 					if commandIndex < len(commands) {
-						inputChannel <- commands[commandIndex]
+						inputChannel <- zmachine.InputResponse{Text: commands[commandIndex], TerminatingKey: 13}
 						commandIndex++
 					} else {
 						// We've sent all commands, stop collecting

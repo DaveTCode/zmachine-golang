@@ -42,6 +42,20 @@ const (
 	Running          StateChangeRequest = iota
 )
 
+// InputRequest is sent when the Z-machine needs line input from the user.
+// It includes the list of valid terminating characters that can end input.
+type InputRequest struct {
+	// ValidTerminators contains the Z-character codes that can end input.
+	// Always includes 13 (carriage return/newline). May also include function keys (129-154, 252-254).
+	ValidTerminators []uint8
+}
+
+// InputResponse is sent back to the Z-machine with the user's input.
+type InputResponse struct {
+	Text           string
+	TerminatingKey uint8 // The Z-character code of the terminator (13 for Enter, or function key code)
+}
+
 type SoundEffectRequest struct {
 	SoundNumber uint16
 	Effect      uint16
@@ -80,7 +94,7 @@ type ZMachine struct {
 	rng                  rand.Rand
 	Alphabets            *zstring.Alphabets
 	outputChannel        chan<- any
-	inputChannel         <-chan string
+	inputChannel         <-chan InputResponse
 	UndoStates           InMemorySaveStateCache
 	nextFramePointer     uint16          // Used for catch/throw in V5+
 	issuedWarnings       map[string]bool // Track warnings to implement "will ignore further occurrences"
@@ -184,7 +198,7 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) er
 	return nil
 }
 
-func LoadRom(storyFile []uint8, inputChannel <-chan string, outputChannel chan<- any) *ZMachine {
+func LoadRom(storyFile []uint8, inputChannel <-chan InputResponse, outputChannel chan<- any) *ZMachine {
 	machine := ZMachine{
 		Core:           zcore.LoadCore(storyFile),
 		inputChannel:   inputChannel,
@@ -514,11 +528,9 @@ func (z *ZMachine) read(opcode *Opcode) {
 	}
 
 	// In V5+ a custom set of terminating characters can be stored in memory
-	validTerminators := []uint8{'\n'}
+	validTerminators := []uint8{13} // 13 is carriage return
 	if z.Core.Version >= 5 {
 		if z.Core.TerminatingCharTableBase != 0 {
-			z.reportError("READ: Terminating characters used but not yet implemented properly")
-			//panic("TODO - Don't use this yet so panic and fix if you find a story file with this set")
 			terminatingChrPtr := z.Core.TerminatingCharTableBase
 			for {
 				b := z.Core.ReadZByte(uint32(terminatingChrPtr))
@@ -527,7 +539,7 @@ func (z *ZMachine) read(opcode *Opcode) {
 				} else if (b >= 129 && b <= 154) || (b >= 252 && b <= 254) {
 					validTerminators = append(validTerminators, b)
 				} else if b == 255 { // Special case means "all function keys are terminators"
-					validTerminators = []uint8{'\n', 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 252, 253, 254} // nolint:ineffassign,staticcheck
+					validTerminators = []uint8{13, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 252, 253, 254}
 					break
 				}
 
@@ -538,12 +550,12 @@ func (z *ZMachine) read(opcode *Opcode) {
 
 	// TODO - Handle timed interrupts of the read function
 	// TODO - Somehow let UI know how many chars to accept
-	z.outputChannel <- WaitForInput
-	rawText := <-z.inputChannel
+	z.outputChannel <- InputRequest{ValidTerminators: validTerminators}
+	inputResponse := <-z.inputChannel
 	textBufferPtr := opcode.operands[0].Value(z)
 	parseBufferPtr := opcode.operands[1].Value(z)
 
-	rawTextBytes := []byte(strings.ToLower(rawText))
+	rawTextBytes := []byte(strings.ToLower(inputResponse.Text))
 
 	bufferSize := z.Core.ReadZByte(uint32(textBufferPtr))
 	textBufferPtr++
@@ -586,8 +598,8 @@ func (z *ZMachine) read(opcode *Opcode) {
 			z.reportError("READ: %v", err)
 			return
 		}
-		//  TODO - Should be the typed terminating char
-		z.writeVariable(z.readIncPC(frame), 13, false) // nolint:errcheck
+		// Store the actual terminating character that ended input
+		z.writeVariable(z.readIncPC(frame), uint16(inputResponse.TerminatingKey), false) // nolint:errcheck
 	}
 }
 
@@ -1477,12 +1489,15 @@ func (z *ZMachine) StepMachine() bool {
 
 			case 22: // READ_CHAR
 				z.outputChannel <- WaitForCharacter
-				rawText := <-z.inputChannel
+				inputResponse := <-z.inputChannel
 
 				// Handle empty input (treat as newline)
 				charCode := uint16(13) // Default to carriage return
-				if len(rawText) > 0 {
-					charCode = uint16(rawText[0])
+				if len(inputResponse.Text) > 0 {
+					charCode = uint16(inputResponse.Text[0])
+				} else if inputResponse.TerminatingKey != 0 {
+					// Use terminating key if text is empty (e.g., function key was pressed)
+					charCode = uint16(inputResponse.TerminatingKey)
 				}
 				z.writeVariable(z.readIncPC(frame), charCode, false) // nolint:errcheck
 
