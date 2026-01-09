@@ -118,16 +118,16 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			os.Exit(0)
 		}
 
-		if m.appState == appWaitingForCharacter {
+		switch m.appState {
+		case appWaitingForCharacter:
 			m.appState = appRunning
 			if len(msg.Runes) > 0 {
 				m.sendChannel <- string(msg.Runes[0])
 			} else {
 				m.sendChannel <- string("\n") // TODO - Maybe ok? Does it really matter if escape was pressed?
 			}
-		} else {
-			switch msg.Type {
-			case tea.KeyEnter: // TODO - Some versions have different keys which trigger this
+		case appWaitingForInput:
+			if msg.Type == tea.KeyEnter { // TODO - Some versions have different keys which trigger this
 				m.appState = appRunning
 				m.lowerWindowText += m.inputBox.Value() + "\n"
 				m.sendChannel <- m.inputBox.Value()
