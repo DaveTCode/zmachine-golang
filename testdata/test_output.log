@@ -268,8 +268,7 @@ Found 466 games to test
 [161/466] ✗ adv551.z8
         Error: EXT save not implemented
 [162/466] ✓ advent.z3
-[163/466] ✗ advent.z6
-        Error: EXT opcode not implemented 0x12 at 0x6d95
+[163/466] ✓ advent.z6
 [164/466] ✗ advent.z8
         Error: EXT save not implemented
 [165/466] ✓ adverbum.z5
@@ -660,7 +659,8 @@ Recent opcode history (most recent last):
 [397/466] ✗ submarine-sabotage.z3
         Error: OP0 opcode not implemented 0xb5 at 0x4b1b
 [398/466] ✓ submarine-sabotage.z5
-[399/466] ✓ sunburst.z6
+[399/466] ✗ sunburst.z6
+        Error: V6 cursor operations not implemented
 [400/466] ✗ sutwin.z5
         Error: EXT save not implemented
 [401/466] ✗ suvehnux.z5
