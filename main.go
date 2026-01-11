@@ -187,7 +187,7 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
-			os.Exit(0)
+			return m, tea.Quit
 		}
 
 		switch m.appState {
