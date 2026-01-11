@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -627,6 +628,10 @@ func (z *ZMachine) Run() {
 	// Catch any remaining panics from helper functions and convert to RuntimeError
 	defer func() {
 		if r := recover(); r != nil {
+			// Capture the stack trace immediately - this must be done in the recover
+			// to get the original panic location
+			stackTrace := debug.Stack()
+
 			// Build debug context from PC history
 			var debugInfo strings.Builder
 			fmt.Fprintf(&debugInfo, "Internal error: %v\n", r)
@@ -638,6 +643,7 @@ func (z *ZMachine) Run() {
 					fmt.Fprintf(&debugInfo, "  PC=0x%x opcode=0x%x operands=%v\n", op.pc, op.opcodeByte, op.operands)
 				}
 			}
+			fmt.Fprintf(&debugInfo, "\nGo stack trace:\n%s", stackTrace)
 			z.outputChannel <- RuntimeError(debugInfo.String())
 			z.outputChannel <- Quit(true)
 		}

@@ -162,7 +162,7 @@ Found 466 games to test
 [161/466] ✓ adv551.z8
 [162/466] ✓ advent.z3
 [163/466] ✗ advent.z6
-        Error: EXT opcode not implemented 0x12 at 0x6d95
+        Error: After command 0 "(initial startup)": EXT opcode not implemented 0x12 at 0x6d95
 [164/466] ✓ advent.z8
 [165/466] ✓ adverbum.z5
 [166/466] ✓ alice3.z5
@@ -216,7 +216,7 @@ Found 466 games to test
 [214/466] ✓ chico.z5
 [215/466] ✓ chix.z5
 [216/466] ✗ cia.z5
-        Error: Internal error: runtime error: index out of range [65535] with length 54784
+        Error: After command 59 "get all": Internal error: runtime error: index out of range [65535] with length 54784
 Recent opcode history (most recent last):
   PC=0x6515 opcode=0x95 operands=[{1 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x6517 opcode=0xcf operands=[{0 5990} {2 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
@@ -228,6 +228,25 @@ Recent opcode history (most recent last):
   PC=0x6515 opcode=0x95 operands=[{1 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x6517 opcode=0xcf operands=[{0 5990} {2 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x651d opcode=0x50 operands=[{2 0} {1 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
+
+Go stack trace:
+goroutine 330 [running]:
+runtime/debug.Stack()
+	C:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e
+github.com/davetcode/goz/zmachine.(*ZMachine).Run.func1()
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:633 +0x51
+panic({0x7ff6331a8420?, 0xc00c9237e8?})
+	C:/Program Files/Go/src/runtime/panic.go:783 +0x132
+github.com/davetcode/goz/zcore.(*Core).ReadZByte(...)
+	C:/code/home/zmachine-golang/zcore/core.go:139
+github.com/davetcode/goz/zmachine.(*ZMachine).StepMachine(0xc017dcb8c8)
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:1015 +0x52c5
+github.com/davetcode/goz/zmachine.(*ZMachine).Run(0xc017dcb8c8)
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:655 +0x89
+main.runGameTest.func2()
+	C:/code/home/zmachine-golang/cmd/gametest/main.go:410 +0x59
+created by main.runGameTest in goroutine 1
+	C:/code/home/zmachine-golang/cmd/gametest/main.go:401 +0x24b
 
 [217/466] ✓ claw.z5
 [218/466] ✓ cleangetaway.z5
@@ -261,7 +280,7 @@ Recent opcode history (most recent last):
 [246/466] ✓ entropy.z8
 [247/466] ✓ eric_dm.z5
 [248/466] ✗ f209.z5
-        Error: Internal error: runtime error: index out of range [65535] with length 56832
+        Error: After command 59 "get all": Internal error: runtime error: index out of range [65535] with length 56832
 Recent opcode history (most recent last):
   PC=0x5b05 opcode=0x95 operands=[{1 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x5b07 opcode=0xcf operands=[{0 3749} {2 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
@@ -273,6 +292,25 @@ Recent opcode history (most recent last):
   PC=0x5b05 opcode=0x95 operands=[{1 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x5b07 opcode=0xcf operands=[{0 3749} {2 2} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
   PC=0x5b0d opcode=0x50 operands=[{2 0} {1 0} {0 0} {0 0} {0 0} {0 0} {0 0} {0 0}]
+
+Go stack trace:
+goroutine 60 [running]:
+runtime/debug.Stack()
+	C:/Program Files/Go/src/runtime/debug/stack.go:26 +0x5e
+github.com/davetcode/goz/zmachine.(*ZMachine).Run.func1()
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:633 +0x51
+panic({0x7ff6331a8420?, 0xc00cf35608?})
+	C:/Program Files/Go/src/runtime/panic.go:783 +0x132
+github.com/davetcode/goz/zcore.(*Core).ReadZByte(...)
+	C:/code/home/zmachine-golang/zcore/core.go:139
+github.com/davetcode/goz/zmachine.(*ZMachine).StepMachine(0xc02e22b208)
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:1015 +0x52c5
+github.com/davetcode/goz/zmachine.(*ZMachine).Run(0xc02e22b208)
+	C:/code/home/zmachine-golang/zmachine/zmachine.go:655 +0x89
+main.runGameTest.func2()
+	C:/code/home/zmachine-golang/cmd/gametest/main.go:410 +0x59
+created by main.runGameTest in goroutine 1
+	C:/code/home/zmachine-golang/cmd/gametest/main.go:401 +0x24b
 
 [249/466] ✓ fable.z5
 [250/466] ✓ fantasydimension.z3
@@ -400,7 +438,7 @@ Recent opcode history (most recent last):
 [372/466] ✓ seacoral.z5
 [373/466] ✓ selection.z5
 [374/466] ✗ sfiction.z8
-        Error: Timeout running commands
+        Error: Timeout after command 154 "north then east"
 [375/466] ✓ sgate.z5
 [376/466] ✓ sh1.z5
 [377/466] ✓ sh3.z5

@@ -146,7 +146,7 @@
       ]
     },
     {
-      "name": "Launch Advent_Crowther.z8",
+      "name": "Launch sfiction.z8",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -154,7 +154,7 @@
       "console": "integratedTerminal",
       "args": [
         "--rom",
-        "stories/Advent_Crowther.z8"
+        "stories/sfiction.z8"
       ]
     },
     {

@@ -412,6 +412,7 @@ func runGameTest(gamePath string) (result TestResult) {
 	}()
 
 	collectOutput := true
+	lastCommand := "(initial startup)"
 	for collectOutput {
 		select {
 		case msg := <-outputChannel:
@@ -423,6 +424,7 @@ func runGameTest(gamePath string) (result TestResult) {
 			case zmachine.InputRequest:
 				// Game is waiting for line input - send next command
 				if commandIndex < len(commands) {
+					lastCommand = commands[commandIndex]
 					inputChannel <- zmachine.InputResponse{Text: commands[commandIndex], TerminatingKey: 13}
 					commandIndex++
 				} else {
@@ -433,6 +435,7 @@ func runGameTest(gamePath string) (result TestResult) {
 				if v == zmachine.WaitForCharacter {
 					// Game is waiting for character input - send next command
 					if commandIndex < len(commands) {
+						lastCommand = commands[commandIndex]
 						inputChannel <- zmachine.InputResponse{Text: commands[commandIndex], TerminatingKey: 13}
 						commandIndex++
 					} else {
@@ -452,12 +455,12 @@ func runGameTest(gamePath string) (result TestResult) {
 				collectOutput = false
 			case zmachine.RuntimeError:
 				result.Success = false
-				result.ErrorMessage = string(v)
+				result.ErrorMessage = fmt.Sprintf("After command %d %q: %s", commandIndex, lastCommand, string(v))
 				return
 			}
 		case <-timeout:
 			result.Success = false
-			result.ErrorMessage = "Timeout running commands"
+			result.ErrorMessage = fmt.Sprintf("Timeout after command %d %q", commandIndex, lastCommand)
 			return
 		case <-done:
 			collectOutput = false
