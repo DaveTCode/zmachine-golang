@@ -1,355 +1,219 @@
 Found 466 games to test
 [1/466] ✓ 7doctors.z5
-[2/466] ✗ 905.z5
-        Error: EXT save not implemented
+[2/466] ✓ 905.z5
 [3/466] ✓ A1RL0CK.z5
-[4/466] ✗ AOTYRZ.z5
-        Error: EXT save not implemented
-[5/466] ✗ Acheton.z8
-        Error: EXT save not implemented
+[4/466] ✓ AOTYRZ.z5
+[5/466] ✓ Acheton.z8
 [6/466] ✓ Advent.z5
 [7/466] ✓ Advent_Crowther.z8
-[8/466] ✗ Adventureland.z5
-        Error: EXT save not implemented
-[9/466] ✗ AlongTheRiver.z5
-        Error: EXT save not implemented
+[8/466] ✓ Adventureland.z5
+[9/466] ✓ AlongTheRiver.z5
 [10/466] ✓ Alpha.z5
-[11/466] ✗ Ambassadors_Daughter.z8
-        Error: EXT save not implemented
+[11/466] ✓ Ambassadors_Daughter.z8
 [12/466] ✓ AndAHippoNewYear.z8
-[13/466] ✗ Andromeda_Genesis.z8
-        Error: EXT save not implemented
-[14/466] ✗ Asylum.z5
-        Error: EXT restore not implemented
-[15/466] ✗ AtWork.z5
-        Error: EXT save not implemented
+[13/466] ✓ Andromeda_Genesis.z8
+[14/466] ✓ Asylum.z5
+[15/466] ✓ AtWork.z5
 [16/466] ✓ Aug4.z8
 [17/466] ✓ Avon.z5
-[18/466] ✗ B7_Snare.z8
-        Error: EXT save not implemented
-[19/466] ✗ Balances.z5
-        Error: EXT save not implemented
-[20/466] ✗ BibleRetold.z5
-        Error: EXT save not implemented
+[18/466] ✓ B7_Snare.z8
+[19/466] ✓ Balances.z5
+[20/466] ✓ BibleRetold.z5
 [21/466] ✓ Biscuit.z5
-[22/466] ✗ BlackNWhiteRag.z5
-        Error: EXT save not implemented
+[22/466] ✓ BlackNWhiteRag.z5
 [23/466] ✓ BrandX.z5
-[24/466] ✗ Cacophony.z8
-        Error: EXT save not implemented
-[25/466] ✗ Calendar.z5
-        Error: EXT save not implemented
-[26/466] ✗ CalmMuteMoving.z5
-        Error: EXT save not implemented
+[24/466] ✓ Cacophony.z8
+[25/466] ✓ Calendar.z5
+[26/466] ✓ CalmMuteMoving.z5
 [27/466] ✓ Casting.z5
-[28/466] ✗ Chaos.z5
-        Error: EXT save not implemented
-[29/466] ✗ Code_Name_Silver_Steel.z8
-        Error: EXT restore not implemented
+[28/466] ✓ Chaos.z5
+[29/466] ✓ Code_Name_Silver_Steel.z8
 [30/466] ✓ Comp96.z5
-[31/466] ✗ ConanKillEverything.z5
-        Error: EXT restore not implemented
-[32/466] ✗ Cove.z5
-        Error: EXT restore not implemented
+[31/466] ✓ ConanKillEverything.z5
+[32/466] ✓ Cove.z5
 [33/466] ✓ CriticalBreach.z8
-[34/466] ✗ Crobe.z5
-        Error: EXT save not implemented
-[35/466] ✗ CtDoom.z5
-        Error: EXT save not implemented
+[34/466] ✓ Crobe.z5
+[35/466] ✓ CtDoom.z5
 [36/466] ✓ Cyclops.z5
 [37/466] ✓ DDIV.z5
-[38/466] ✗ Debate.z5
-        Error: EXT restore not implemented
+[38/466] ✓ Debate.z5
 [39/466] ✓ Delusns.z5
-[40/466] ✗ DontPeeYourself.z8
-        Error: EXT restore not implemented
-[41/466] ✗ Dont_Push_The_Mailbox.z8
-        Error: EXT restore not implemented
+[40/466] ✓ DontPeeYourself.z8
+[41/466] ✓ Dont_Push_The_Mailbox.z8
 [42/466] ✓ DragonTroll.z5
-[43/466] ✗ DuckMe.z3
-        Error: OP0 opcode not implemented 0xb5 at 0x715b
-[44/466] ✗ Egyptian_Walking_Simulator.z8
-        Error: EXT save not implemented
-[45/466] ✗ Elephants.z5
-        Error: EXT save not implemented
+[43/466] ✓ DuckMe.z3
+[44/466] ✓ Egyptian_Walking_Simulator.z8
+[45/466] ✓ Elephants.z5
 [46/466] ✓ Enemies.z8
 [47/466] ✓ FFF.z5
 [48/466] ✓ FailSafe.z5
-[49/466] ✗ Fairyland.z8
-        Error: EXT save not implemented
-[50/466] ✗ FineTune.z8
-        Error: EXT restore not implemented
+[49/466] ✓ Fairyland.z8
+[50/466] ✓ FineTune.z8
 [51/466] ✓ Fork.z5
 [52/466] ✓ Frobozzi.z5
 [53/466] ✓ Fyleet.z5
-[54/466] ✗ GA.z5
-        Error: EXT save not implemented
-[55/466] ✗ GerbilRiot.z5
-        Error: EXT save not implemented
-[56/466] ✗ GreatXavio.z5
-        Error: EXT save not implemented
-[57/466] ✗ Grue.z8
-        Error: EXT restore not implemented
+[54/466] ✓ GA.z5
+[55/466] ✓ GerbilRiot.z5
+[56/466] ✓ GreatXavio.z5
+[57/466] ✓ Grue.z8
 [58/466] ✓ Gumshoe.z5
-[59/466] ✗ HLAinform.z5
-        Error: EXT save not implemented
-[60/466] ✗ HallowEve.z8
-        Error: EXT save not implemented
+[59/466] ✓ HLAinform.z5
+[60/466] ✓ HallowEve.z8
 [61/466] ✓ Hamil.z5
-[62/466] ✗ Hat.z5
-        Error: EXT save not implemented
-[63/466] ✗ Help.z8
-        Error: EXT restore not implemented
+[62/466] ✓ Hat.z5
+[63/466] ✓ Help.z8
 [64/466] ✓ Heroine.z8
-[65/466] ✗ Hide_a_pachyderm%21.z5
-        Error: EXT restore not implemented
-[66/466] ✗ Home.z5
-        Error: EXT save not implemented
-[67/466] ✗ HouseOfDreamOfMoon.z8
-        Error: EXT save not implemented
-[68/466] ✗ HugeCave.z8
-        Error: EXT restore not implemented
+[65/466] ✓ Hide_a_pachyderm%21.z5
+[66/466] ✓ Home.z5
+[67/466] ✓ HouseOfDreamOfMoon.z8
+[68/466] ✓ HugeCave.z8
 [69/466] ✓ HugeHint.z5
-[70/466] ✗ I-0.z5
-        Error: EXT restore not implemented
-[71/466] ✗ IF_Whispers_5.z8
-        Error: EXT save not implemented
-[72/466] ✗ Ibo.z5
-        Error: EXT save not implemented
-[73/466] ✗ ImpossibleStairs.z8
-        Error: EXT save not implemented
-[74/466] ✗ Inevita.z5
-        Error: EXT save not implemented
-[75/466] ✗ Informat.z5
-        Error: EXT save not implemented
+[70/466] ✓ I-0.z5
+[71/466] ✓ IF_Whispers_5.z8
+[72/466] ✓ Ibo.z5
+[73/466] ✓ ImpossibleStairs.z8
+[74/466] ✓ Inevita.z5
+[75/466] ✓ Informat.z5
 [76/466] ✓ Jigsaw.z8
 [77/466] ✓ Jigsaw_Footnotes.z5
-[78/466] ✗ Jigsaw_Game.z5
-        Error: EXT restore not implemented
-[79/466] ✗ Kentish_Plover.z8
-        Error: EXT save not implemented
-[80/466] ✗ LDoDoom.z5
-        Error: EXT restore not implemented
-[81/466] ✗ LLR3.z8
-        Error: EXT restore not implemented
-[82/466] ✗ Leopold.z5
-        Error: EXT save not implemented
+[78/466] ✓ Jigsaw_Game.z5
+[79/466] ✓ Kentish_Plover.z8
+[80/466] ✓ LDoDoom.z5
+[81/466] ✓ LLR3.z8
+[82/466] ✓ Leopold.z5
 [83/466] ✓ LostPig.z8
-[84/466] ✗ LostSheep.z5
-        Error: EXT save not implemented
-[85/466] ✗ Mahadev.z5
-        Error: EXT save not implemented
+[84/466] ✓ LostSheep.z5
+[85/466] ✓ Mahadev.z5
 [86/466] ✓ MakeItGood.z8
-[87/466] ✗ Mask.z5
-        Error: EXT restore not implemented
+[87/466] ✓ Mask.z5
 [88/466] ✓ Mercury_Trucking.z5
 [89/466] ✓ Mercy.z5
 [90/466] ✓ Misdirection.z5
-[91/466] ✗ More.z8
-        Error: EXT save not implemented
+[91/466] ✓ More.z8
 [92/466] ✓ Mulldoon.z8
-[93/466] ✗ Mullmurd.z5
-        Error: EXT save not implemented
-[94/466] ✗ Murdac.z5
-        Error: EXT save not implemented
+[93/466] ✓ Mullmurd.z5
+[94/466] ✓ Murdac.z5
 [95/466] ✓ My_Angel.z5
 [96/466] ✓ Nidus.z5
-[97/466] ✗ Nihilism.z8
-        Error: EXT save not implemented
-[98/466] ✗ NudistsGoneWild.z8
-        Error: EXT restore not implemented
-[99/466] ✗ OnYourBack.z5
-        Error: EXT save not implemented
+[97/466] ✓ Nihilism.z8
+[98/466] ✓ NudistsGoneWild.z8
+[99/466] ✓ OnYourBack.z5
 [100/466] ✓ OneGirl.z5
-[101/466] ✗ One_Game_in_Search_of_a_Story.z5
-        Error: EXT save not implemented
-[102/466] ✗ Ottumwa.z5
-        Error: EXT save not implemented
-[103/466] ✗ PS.z8
-        Error: EXT save not implemented
+[101/466] ✓ One_Game_in_Search_of_a_Story.z5
+[102/466] ✓ Ottumwa.z5
+[103/466] ✓ PS.z8
 [104/466] ✓ PUTPBAA.z5
 [105/466] ✓ Parc.z5
-[106/466] ✗ Peacock.z5
-        Error: EXT save not implemented
-[107/466] ✗ RBD.z8
-        Error: EXT save not implemented
+[106/466] ✓ Peacock.z5
+[107/466] ✓ RBD.z8
 [108/466] ✓ Ralph.z5
-[109/466] ✗ Reddex.z8
-        Error: EXT save not implemented
+[109/466] ✓ Reddex.z8
 [110/466] ✓ Relief.z5
-[111/466] ✗ RoomSerial.z8
-        Error: EXT save not implemented
-[112/466] ✗ RtDoom.z5
-        Error: EXT save not implemented
-[113/466] ✗ SameGame.z5
-        Error: EXT restore not implemented
-[114/466] ✗ Sangraal.z5
-        Error: EXT save not implemented
+[111/466] ✓ RoomSerial.z8
+[112/466] ✓ RtDoom.z5
+[113/466] ✓ SameGame.z5
+[114/466] ✓ Sangraal.z5
 [115/466] ✓ School.z5
-[116/466] ✗ Slackerx.z5
-        Error: EXT save not implemented
-[117/466] ✗ SoFar.z8
-        Error: EXT save not implemented
-[118/466] ✗ SoReality.z8
-        Error: EXT save not implemented
-[119/466] ✗ Somewhere.z5
-        Error: EXT save not implemented
+[116/466] ✓ Slackerx.z5
+[117/466] ✓ SoFar.z8
+[118/466] ✓ SoReality.z8
+[119/466] ✓ Somewhere.z5
 [120/466] ✓ SpAdventure.z5
-[121/466] ✗ Spring_2020.z8
-        Error: EXT save not implemented
+[121/466] ✓ Spring_2020.z8
 [122/466] ✓ Spycatcher.z5
-[123/466] ✗ Sturdlint.z5
-        Error: EXT save not implemented
+[123/466] ✓ Sturdlint.z5
 [124/466] ✓ SundayAfternoon.z8
 [125/466] ✓ Swineback.z5
-[126/466] ✗ TGM.z5
-        Error: EXT save not implemented
-[127/466] ✗ Tangle.z5
-        Error: EXT save not implemented
-[128/466] ✗ TheDayIShotHitler.z5
-        Error: EXT save not implemented
-[129/466] ✗ TheGarlicCage.z8
-        Error: EXT save not implemented
-[130/466] ✗ TheGrandQuest.z5
-        Error: EXT save not implemented
+[126/466] ✓ TGM.z5
+[127/466] ✓ Tangle.z5
+[128/466] ✓ TheDayIShotHitler.z5
+[129/466] ✓ TheGarlicCage.z8
+[130/466] ✓ TheGrandQuest.z5
 [131/466] ✓ TheInvestment.z5
-[132/466] ✗ TheLastDarkDay.z5
-        Error: EXT restore not implemented
-[133/466] ✗ TheRealisticNascarEXperience.z5
-        Error: EXT save not implemented
-[134/466] ✗ TheSmallRoom.z5
-        Error: EXT save not implemented
-[135/466] ✗ TheSpotlight.z8
-        Error: EXT restore not implemented
-[136/466] ✗ TheValleyHouse.z8
-        Error: EXT save not implemented
-[137/466] ✗ The_Computer_Lady.z8
-        Error: EXT restore not implemented
-[138/466] ✗ The_Fifth_Continent.z8
-        Error: EXT save not implemented
-[139/466] ✗ The_Grand_Tour.z8
-        Error: EXT restore not implemented
-[140/466] ✗ The_Minimalist_Game.z5
-        Error: EXT restore not implemented
-[141/466] ✗ The_Paper_Bag_Princess.z8
-        Error: EXT restore not implemented
-[142/466] ✗ ThreeCowsAndTwoDoors.z5
-        Error: EXT save not implemented
-[143/466] ✗ TimeForTea.z8
-        Error: EXT save not implemented
+[132/466] ✓ TheLastDarkDay.z5
+[133/466] ✓ TheRealisticNascarEXperience.z5
+[134/466] ✓ TheSmallRoom.z5
+[135/466] ✓ TheSpotlight.z8
+[136/466] ✓ TheValleyHouse.z8
+[137/466] ✓ The_Computer_Lady.z8
+[138/466] ✓ The_Fifth_Continent.z8
+[139/466] ✓ The_Grand_Tour.z8
+[140/466] ✓ The_Minimalist_Game.z5
+[141/466] ✓ The_Paper_Bag_Princess.z8
+[142/466] ✓ ThreeCowsAndTwoDoors.z5
+[143/466] ✓ TimeForTea.z8
 [144/466] ✓ Tokyo2.z5
-[145/466] ✗ Toxin.z8
-        Error: EXT save not implemented
-[146/466] ✗ Transporter.z5
-        Error: EXT save not implemented
-[147/466] ✗ TutorialHotel.z5
-        Error: EXT save not implemented
-[148/466] ✗ UMW.z8
-        Error: EXT save not implemented
-[149/466] ✗ UnderTheBed.z8
-        Error: EXT restore not implemented
-[150/466] ✗ UniPool.z5
-        Error: EXT save not implemented
+[145/466] ✓ Toxin.z8
+[146/466] ✓ Transporter.z5
+[147/466] ✓ TutorialHotel.z5
+[148/466] ✓ UMW.z8
+[149/466] ✓ UnderTheBed.z8
+[150/466] ✓ UniPool.z5
 [151/466] ✓ Vacation.z5
-[152/466] ✗ WalkInThePark.z5
-        Error: EXT restore not implemented
+[152/466] ✓ WalkInThePark.z5
 [153/466] ✓ Xeno.z5
-[154/466] ✗ ZTornado.z5
-        Error: EXT restore not implemented
+[154/466] ✓ ZTornado.z5
 [155/466] ✓ Zokoban.z5
 [156/466] ✓ Zork_LXIX.z5
 [157/466] ✓ aasmasters.z5
-[158/466] ✗ acorncourt.z5
-        Error: EXT save not implemented
-[159/466] ✗ adv440.z8
-        Error: EXT save not implemented
-[160/466] ✗ adv550.z8
-        Error: EXT save not implemented
-[161/466] ✗ adv551.z8
-        Error: EXT save not implemented
+[158/466] ✓ acorncourt.z5
+[159/466] ✓ adv440.z8
+[160/466] ✓ adv550.z8
+[161/466] ✓ adv551.z8
 [162/466] ✓ advent.z3
-[163/466] ✓ advent.z6
-[164/466] ✗ advent.z8
-        Error: EXT save not implemented
+[163/466] ✗ advent.z6
+        Error: EXT opcode not implemented 0x12 at 0x6d95
+[164/466] ✓ advent.z8
 [165/466] ✓ adverbum.z5
-[166/466] ✗ alice3.z5
-        Error: EXT save not implemented
+[166/466] ✓ alice3.z5
 [167/466] ✓ amish.z5
-[168/466] ✗ amiss.z5
-        Error: EXT save not implemented
-[169/466] ✗ animals.z5
-        Error: EXT restore not implemented
-[170/466] ✗ annoy.z5
-        Error: EXT save not implemented
-[171/466] ✗ appall.z5
-        Error: EXT save not implemented
+[168/466] ✓ amiss.z5
+[169/466] ✓ animals.z5
+[170/466] ✓ annoy.z5
+[171/466] ✓ appall.z5
 [172/466] ✓ asterix.z5
 [173/466] ✓ atrocitron.z5
 [174/466] ✓ ats.z8
 [175/466] ✓ awaken.z5
-[176/466] ✗ awitl.z5
-        Error: EXT save not implemented
-[177/466] ✗ ayac.z5
-        Error: EXT save not implemented
+[176/466] ✓ awitl.z5
+[177/466] ✓ ayac.z5
 [178/466] ✓ azteca.z8
 [179/466] ✓ b2demo.z5
-[180/466] ✗ ballerina102.z8
-        Error: EXT restore not implemented
-[181/466] ✗ bathtub.z5
-        Error: EXT save not implemented
+[180/466] ✓ ballerina102.z8
+[181/466] ✓ bathtub.z5
 [182/466] ✓ bear.z5
-[183/466] ✗ bedlam.z5
-        Error: EXT save not implemented
-[184/466] ✗ beneath.z5
-        Error: EXT save not implemented
+[183/466] ✓ bedlam.z5
+[184/466] ✓ beneath.z5
 [185/466] ✓ bishoes.z5
 [186/466] ✓ bj.z5
-[187/466] ✗ blair.z5
-        Error: EXT save not implemented
+[187/466] ✓ blair.z5
 [188/466] ✓ bluechairs.z5
 [189/466] ✓ blues.z5
-[190/466] ✗ bofh.z5
-        Error: EXT save not implemented
+[190/466] ✓ bofh.z5
 [191/466] ✓ bomber.z5
-[192/466] ✗ bookvol.z5
-        Error: EXT restore not implemented
-[193/466] ✗ booth.z5
-        Error: EXT restore not implemented
-[194/466] ✗ boothdye.z5
-        Error: EXT restore not implemented
-[195/466] ✗ brainofthenightguest.z8
-        Error: EXT save not implemented
+[192/466] ✓ bookvol.z5
+[193/466] ✓ booth.z5
+[194/466] ✓ boothdye.z5
+[195/466] ✓ brainofthenightguest.z8
 [196/466] ✓ break-in.z5
 [197/466] ✓ bse.z5
-[198/466] ✗ buccaneers_cache.z3
-        Error: OP0 opcode not implemented 0xb6 at 0x33e7
+[198/466] ✓ buccaneers_cache.z3
 [199/466] ✓ building.z5
 [200/466] ✓ bunny.z5
-[201/466] ✗ burglar.z5
-        Error: EXT save not implemented
+[201/466] ✓ burglar.z5
 [202/466] ✓ cabal.z5
-[203/466] ✗ calypso.z5
-        Error: EXT save not implemented
-[204/466] ✗ candy.z5
-        Error: EXT save not implemented
-[205/466] ✗ castle.z8
-        Error: EXT save not implemented
-[206/466] ✗ castles-1.1.z5
-        Error: EXT save not implemented
+[203/466] ✓ calypso.z5
+[204/466] ✓ candy.z5
+[205/466] ✓ castle.z8
+[206/466] ✓ castles-1.1.z5
 [207/466] ✓ catseye.z3
-[208/466] ✗ causality.z5
-        Error: EXT save not implemented
-[209/466] ✗ cavern.z5
-        Error: EXT save not implemented
-[210/466] ✗ cavetrip.z5
-        Error: EXT save not implemented
-[211/466] ✗ cheater.z5
-        Error: EXT restore not implemented
-[212/466] ✗ cheeseshop.z5
-        Error: EXT restore not implemented
+[208/466] ✓ causality.z5
+[209/466] ✓ cavern.z5
+[210/466] ✓ cavetrip.z5
+[211/466] ✓ cheater.z5
+[212/466] ✓ cheeseshop.z5
 [213/466] ✓ cheshire-cat.z5
-[214/466] ✗ chico.z5
-        Error: EXT restore not implemented
+[214/466] ✓ chico.z5
 [215/466] ✓ chix.z5
 [216/466] ✗ cia.z5
         Error: Internal error: runtime error: index out of range [65535] with length 54784
@@ -368,54 +232,34 @@ Recent opcode history (most recent last):
 [217/466] ✓ claw.z5
 [218/466] ✓ cleangetaway.z5
 [219/466] ✓ cluedo.z5
-[220/466] ✗ coldiron.z8
-        Error: EXT save not implemented
-[221/466] ✗ coloromc.z5
-        Error: EXT save not implemented
+[220/466] ✓ coldiron.z8
+[221/466] ✓ coloromc.z5
 [222/466] ✓ cryptographer.z5
-[223/466] ✗ csbb.z8
-        Error: EXT restore not implemented
+[223/466] ✓ csbb.z8
 [224/466] ✓ curses.z5
-[225/466] ✗ curves.z8
-        Error: EXT restore not implemented
-[226/466] ✗ cycles.z5
-        Error: EXT save not implemented
-[227/466] ✗ darkiss1.z5
-        Error: EXT save not implemented
-[228/466] ✗ deadreck.z5
-        Error: EXT save not implemented
+[225/466] ✓ curves.z8
+[226/466] ✓ cycles.z5
+[227/466] ✓ darkiss1.z5
+[228/466] ✓ deadreck.z5
 [229/466] ✓ death.z5
-[230/466] ✗ deephome.z5
-        Error: EXT save not implemented
+[230/466] ✓ deephome.z5
 [231/466] ✓ degen.z5
-[232/466] ✗ dejavu.z3
-        Error: OP0 opcode not implemented 0xb6 at 0x1f6b
+[232/466] ✓ dejavu.z3
 [233/466] ✓ detective.z5
-[234/466] ✗ devdoit.z5
-        Error: EXT save not implemented
-[235/466] ✗ devours.z5
-        Error: EXT restore not implemented
+[234/466] ✓ devdoit.z5
+[235/466] ✓ devours.z5
 [236/466] ✓ dewdrops.z5
-[237/466] ✗ djinni.z5
-        Error: EXT restore not implemented
-[238/466] ✗ dogslife.z5
-        Error: EXT save not implemented
+[237/466] ✓ djinni.z5
+[238/466] ✓ dogslife.z5
 [239/466] ✓ doll.z5
-[240/466] ✗ dontgo.z5
-        Error: EXT restore not implemented
-[241/466] ✗ dracula.z8
-        Error: EXT save not implemented
-[242/466] ✗ dreamhold.z8
-        Error: EXT save not implemented
+[240/466] ✓ dontgo.z5
+[241/466] ✓ dracula.z8
+[242/466] ✓ dreamhold.z8
 [243/466] ✓ dumont.z5
-[244/466] ✗ edifice.z5
-        Error: EXT restore not implemented
-[245/466] ✗ enter.z5
-        Error: EXT save not implemented
-[246/466] ✗ entropy.z8
-        Error: EXT save not implemented
-[247/466] ✗ eric_dm.z5
-        Error: EXT save not implemented
+[244/466] ✓ edifice.z5
+[245/466] ✓ enter.z5
+[246/466] ✓ entropy.z8
+[247/466] ✓ eric_dm.z5
 [248/466] ✗ f209.z5
         Error: Internal error: runtime error: index out of range [65535] with length 56832
 Recent opcode history (most recent last):
@@ -432,339 +276,227 @@ Recent opcode history (most recent last):
 
 [249/466] ✓ fable.z5
 [250/466] ✓ fantasydimension.z3
-[251/466] ✗ farm.z5
-        Error: EXT save not implemented
-[252/466] ✗ findesick.z8
-        Error: EXT save not implemented
+[251/466] ✓ farm.z5
+[252/466] ✓ findesick.z8
 [253/466] ✓ forms.z5
-[254/466] ✗ fracture.z5
-        Error: EXT save not implemented
+[254/466] ✓ fracture.z5
 [255/466] ✓ freefall.z5
-[256/466] ✗ frozen.z5
-        Error: EXT save not implemented
+[256/466] ✓ frozen.z5
 [257/466] ✓ gatoron.z5
-[258/466] ✗ gaucho.z5
-        Error: EXT save not implemented
-[259/466] ✗ gd.z5
-        Error: EXT save not implemented
-[260/466] ✗ geb.z5
-        Error: EXT restore not implemented
-[261/466] ✗ geist.z5
-        Error: EXT save not implemented
-[262/466] ✗ ghost.z8
-        Error: EXT save not implemented
+[258/466] ✓ gaucho.z5
+[259/466] ✓ gd.z5
+[260/466] ✓ geb.z5
+[261/466] ✓ geist.z5
+[262/466] ✓ ghost.z8
 [263/466] ✓ ghostmountain.z5
-[264/466] ✗ godot.z5
-        Error: EXT save not implemented
-[265/466] ✗ gold.z5
-        Error: EXT save not implemented
+[264/466] ✓ godot.z5
+[265/466] ✓ gold.z5
 [266/466] ✓ golf.z5
-[267/466] ✗ gostak.z5
-        Error: EXT save not implemented
+[267/466] ✓ gostak.z5
 [268/466] ✓ gsdemo.z8
-[269/466] ✗ guess.z5
-        Error: EXT restore not implemented
+[269/466] ✓ guess.z5
 [270/466] ✓ guestret.z5
-[271/466] ✗ gussdeath.z3
-        Error: OP0 opcode not implemented 0xb5 at 0x5b27
+[271/466] ✓ gussdeath.z3
 [272/466] ✓ h2.z5
-[273/466] ✗ hangar_22.z5
-        Error: EXT save not implemented
-[274/466] ✗ happy.z5
-        Error: EXT save not implemented
-[275/466] ✗ harry.z8
-        Error: EXT restore not implemented
-[276/466] ✗ hauntings.z8
-        Error: EXT save not implemented
+[273/466] ✓ hangar_22.z5
+[274/466] ✓ happy.z5
+[275/466] ✓ harry.z8
+[276/466] ✓ hauntings.z8
 [277/466] ✓ heist.z8
 [278/466] ✓ housekey1.z5
-[279/466] ✗ huntdark.z5
-        Error: EXT save not implemented
-[280/466] ✗ identity.z5
-        Error: EXT save not implemented
-[281/466] ✗ ill.z5
-        Error: EXT restore not implemented
+[279/466] ✓ huntdark.z5
+[280/466] ✓ identity.z5
+[281/466] ✓ ill.z5
 [282/466] ✓ inhumane.z5
-[283/466] ✗ insight.z5
-        Error: EXT save not implemented
+[283/466] ✓ insight.z5
 [284/466] ✓ invisible.z8
 [285/466] ✓ jack.z5
-[286/466] ✗ jet.z8
-        Error: EXT save not implemented
-[287/466] ✗ jewel.z5
-        Error: EXT save not implemented
-[288/466] ✗ karn.z5
-        Error: EXT save not implemented
+[286/466] ✓ jet.z8
+[287/466] ✓ jewel.z5
+[288/466] ✓ karn.z5
 [289/466] ✓ kidnapsea.z8
-[290/466] ✗ kiiwii.z5
-        Error: EXT restore not implemented
-[291/466] ✗ kirby.z5
-        Error: EXT save not implemented
+[290/466] ✓ kiiwii.z5
+[291/466] ✓ kirby.z5
 [292/466] ✓ kitten.z5
-[293/466] ✗ kooku.z5
-        Error: EXT save not implemented
-[294/466] ✗ lambs.z5
-        Error: EXT save not implemented
-[295/466] ✗ lambs2.z5
-        Error: EXT save not implemented
-[296/466] ✗ largemac.z5
-        Error: EXT save not implemented
+[293/466] ✓ kooku.z5
+[294/466] ✓ lambs.z5
+[295/466] ✓ lambs2.z5
+[296/466] ✓ largemac.z5
 [297/466] ✓ latenightmall.z5
 [298/466] ✓ leaptime.z8
 [299/466] ✓ library.z5
-[300/466] ✗ library_of_horror.z3
-        Error: OP0 opcode not implemented 0xb5 at 0x3141
-[301/466] ✗ lily.z5
-        Error: EXT save not implemented
+[300/466] ✓ library_of_horror.z3
+[301/466] ✓ lily.z5
 [302/466] ✓ limp.z5
 [303/466] ✓ lion.z5
-[304/466] ✗ lists.z5
-        Error: EXT save not implemented
+[304/466] ✓ lists.z5
 [305/466] ✓ loose.z5
 [306/466] ✓ lost.z5
 [307/466] ✓ lucidnight.z5
-[308/466] ✗ ludicorp.z5
-        Error: EXT save not implemented
-[309/466] ✗ magic-toyshop.z5
-        Error: EXT save not implemented
-[310/466] ✗ mansion.z5
-        Error: EXT save not implemented
+[308/466] ✓ ludicorp.z5
+[309/466] ✓ magic-toyshop.z5
+[310/466] ✓ mansion.z5
 [311/466] ✓ mars2049ad.z5
 [312/466] ✓ mary.z5
 [313/466] ✓ medusa.z5
 [314/466] ✓ memorylane.z5
-[315/466] ✗ metamorp.z5
-        Error: EXT save not implemented
-[316/466] ✗ mhpquest.z5
-        Error: EXT save not implemented
+[315/466] ✓ metamorp.z5
+[316/466] ✓ mhpquest.z5
 [317/466] ✓ mimesis.z5
 [318/466] ✓ mindelec.z5
 [319/466] ✓ mines.z5
 [320/466] ✓ minster.z5
-[321/466] ✗ monster-maker.z8
-        Error: EXT save not implemented
+[321/466] ✓ monster-maker.z8
 [322/466] ✓ moonglow.z3
-[323/466] ✗ mortlake.z8
-        Error: EXT save not implemented
-[324/466] ✗ mr-p.z5
-        Error: EXT save not implemented
+[323/466] ✓ mortlake.z8
+[324/466] ✓ mr-p.z5
 [325/466] ✓ mst3k1.z5
 [326/466] ✓ mst3k1_2.z5
 [327/466] ✓ mst3k2.z5
-[328/466] ✗ murderer.z5
-        Error: EXT save not implemented
+[328/466] ✓ murderer.z5
 [329/466] ✓ muse.z5
-[330/466] ✗ musician.z8
-        Error: EXT save not implemented
+[330/466] ✓ musician.z8
 [331/466] ✓ mystery-of-winchester-high.z5
-[332/466] ✗ nameless.z8
-        Error: EXT save not implemented
+[332/466] ✓ nameless.z8
 [333/466] ✓ newday.z5
 [334/466] ✓ night.z5
 [335/466] ✓ ninepts.z5
 [336/466] ✓ njag.z5
-[337/466] ✗ noroom.z5
-        Error: EXT restore not implemented
-[338/466] ✗ northnorth.z8
-        Error: EXT restore not implemented
+[337/466] ✓ noroom.z5
+[338/466] ✓ northnorth.z8
 [339/466] ✓ nuntalylihu.z5
-[340/466] ✗ oad.z5
-        Error: EXT restore not implemented
-[341/466] ✗ omniquest.z5
-        Error: EXT save not implemented
-[342/466] ✗ orevore.z8
-        Error: EXT restore not implemented
-[343/466] ✗ orient_express.z5
-        Error: EXT save not implemented
+[340/466] ✓ oad.z5
+[341/466] ✓ omniquest.z5
+[342/466] ✓ orevore.z8
+[343/466] ✓ orient_express.z5
 [344/466] ✓ orion.z5
-[345/466] ✗ pad.z5
-        Error: EXT save not implemented
+[345/466] ✓ pad.z5
 [346/466] ✓ paint.z5
-[347/466] ✗ paperchase.z5
-        Error: EXT restore not implemented
-[348/466] ✗ parallel.z5
-        Error: EXT save not implemented
-[349/466] ✗ pentari.z5
-        Error: EXT save not implemented
+[347/466] ✓ paperchase.z5
+[348/466] ✓ parallel.z5
+[349/466] ✓ pentari.z5
 [350/466] ✓ permagic.z5
 [351/466] ✓ phlegm.z5
-[352/466] ✗ photopia.z5
-        Error: EXT save not implemented
+[352/466] ✓ photopia.z5
 [353/466] ✓ piece_v3.z5
 [354/466] ✓ piracy_2.z5
-[355/466] ✗ praser5.z5
-        Error: EXT save not implemented
+[355/466] ✓ praser5.z5
 [356/466] ✓ promoted.z5
 [357/466] ✓ puerto.z5
-[358/466] ✗ punkpnts.z5
-        Error: EXT save not implemented
-[359/466] ✗ pytho.z8
-        Error: EXT save not implemented
-[360/466] ✗ reading.z5
-        Error: EXT save not implemented
-[361/466] ✗ reser.z5
-        Error: EXT restore not implemented
+[358/466] ✓ punkpnts.z5
+[359/466] ✓ pytho.z8
+[360/466] ✓ reading.z5
+[361/466] ✓ reser.z5
 [362/466] ✓ residnt2.z5
 [363/466] ✓ reverb.z5
 [364/466] ✓ reverzi.z5
-[365/466] ✗ ribbons.z5
-        Error: EXT save not implemented
+[365/466] ✓ ribbons.z5
 [366/466] ✓ robots.z5
 [367/466] ✓ rogue.z5
 [368/466] ✓ samhain.z5
 [369/466] ✓ saveprinceton.z8
-[370/466] ✗ scald.z5
-        Error: EXT save not implemented
+[370/466] ✓ scald.z5
 [371/466] ✓ schooldays.z5
 [372/466] ✓ seacoral.z5
-[373/466] ✗ selection.z5
-        Error: EXT save not implemented
+[373/466] ✓ selection.z5
 [374/466] ✗ sfiction.z8
         Error: Timeout running commands
 [375/466] ✓ sgate.z5
-[376/466] ✗ sh1.z5
-        Error: EXT restore not implemented
-[377/466] ✗ sh3.z5
-        Error: EXT restore not implemented
-[378/466] ✗ sh4.z5
-        Error: EXT restore not implemented
-[379/466] ✗ shade.z5
-        Error: EXT save not implemented
+[376/466] ✓ sh1.z5
+[377/466] ✓ sh3.z5
+[378/466] ✓ sh4.z5
+[379/466] ✓ shade.z5
 [380/466] ✓ sherbet.z5
-[381/466] ✗ shrapnel.z5
-        Error: EXT save not implemented
-[382/466] ✗ six-gray-rats.z8
-        Error: EXT save not implemented
-[383/466] ✗ solitary.z5
-        Error: EXT save not implemented
-[384/466] ✗ spacest2.z5
-        Error: EXT save not implemented
+[381/466] ✓ shrapnel.z5
+[382/466] ✓ six-gray-rats.z8
+[383/466] ✓ solitary.z5
+[384/466] ✓ spacest2.z5
 [385/466] ✓ spacez.z5
-[386/466] ✗ spirit.z5
-        Error: EXT save not implemented
+[386/466] ✓ spirit.z5
 [387/466] ✓ sporkery1.z5
-[388/466] ✗ spot.z5
-        Error: EXT save not implemented
+[388/466] ✓ spot.z5
 [389/466] ✓ spring.z8
 [390/466] ✓ standing.z5
-[391/466] ✗ starlight.z8
-        Error: EXT restore not implemented
+[391/466] ✓ starlight.z8
 [392/466] ✓ stiffmst.z5
-[393/466] ✗ stiffy.z5
-        Error: EXT save not implemented
+[393/466] ✓ stiffy.z5
 [394/466] ✓ stinkorswim.z8
-[395/466] ✗ stonecage.z5
-        Error: EXT save not implemented
+[395/466] ✓ stonecage.z5
 [396/466] ✓ strike_force.z5
-[397/466] ✗ submarine-sabotage.z3
-        Error: OP0 opcode not implemented 0xb5 at 0x4b1b
+[397/466] ✓ submarine-sabotage.z3
 [398/466] ✓ submarine-sabotage.z5
-[399/466] ✗ sunburst.z6
-        Error: V6 cursor operations not implemented
-[400/466] ✗ sutwin.z5
-        Error: EXT save not implemented
-[401/466] ✗ suvehnux.z5
-        Error: EXT save not implemented
-[402/466] ✗ sycamora.z5
-        Error: EXT save not implemented
+[399/466] ✓ sunburst.z6
+[400/466] ✓ sutwin.z5
+[401/466] ✓ suvehnux.z5
+[402/466] ✓ sycamora.z5
 [403/466] ✓ tKatC-SE.z8
 [404/466] ✓ taipan.z5
 [405/466] ✓ tatctae.z8
-[406/466] ✗ teacher.z5
-        Error: EXT save not implemented
-[407/466] ✗ tell.z5
-        Error: EXT save not implemented
+[406/466] ✓ teacher.z5
+[407/466] ✓ tell.z5
 [408/466] ✓ temple.z5
 [409/466] ✓ terror_tabby.z5
-[410/466] ✗ tess.z5
-        Error: EXT save not implemented
+[410/466] ✓ tess.z5
 [411/466] ✓ tfmdemo.z8
-[412/466] ✗ the-grumpy-cricket.z8
-        Error: EXT save not implemented
+[412/466] ✓ the-grumpy-cricket.z8
 [413/466] ✓ the_job.z5
 [414/466] ✓ theatre.z5
 [415/466] ✓ thegallery.z5
-[416/466] ✗ thegreat.z5
-        Error: EXT save not implemented
-[417/466] ✗ thestargods.z8
-        Error: EXT save not implemented
-[418/466] ✗ thorn.z5
-        Error: EXT save not implemented
+[416/466] ✓ thegreat.z5
+[417/466] ✓ thestargods.z8
+[418/466] ✓ thorn.z5
 [419/466] ✓ thornfell_manor_1984.z5
-[420/466] ✗ threemore.z5
-        Error: EXT save not implemented
-[421/466] ✗ tk1.z5
-        Error: EXT restore not implemented
-[422/466] ✗ traffic.z5
-        Error: EXT save not implemented
+[420/466] ✓ threemore.z5
+[421/466] ✓ tk1.z5
+[422/466] ✓ traffic.z5
 [423/466] ✓ troll.z5
 [424/466] ✓ trw.z5
-[425/466] ✗ tryst205.z5
-        Error: EXT save not implemented
-[426/466] ✗ tube.z5
-        Error: EXT save not implemented
+[425/466] ✓ tryst205.z5
+[426/466] ✓ tube.z5
 [427/466] ✓ uhoh-demo.z5
-[428/466] ✗ under.z5
-        Error: EXT save not implemented
+[428/466] ✓ under.z5
 [429/466] ✓ uninvited.z5
-[430/466] ✗ vampire.z8
-        Error: EXT save not implemented
-[431/466] ✗ venice.z5
-        Error: EXT save not implemented
+[430/466] ✓ vampire.z8
+[431/466] ✓ venice.z5
 [432/466] ✓ vespers.z8
-[433/466] ✗ vgame.z8
-        Error: EXT save not implemented
+[433/466] ✓ vgame.z8
 [434/466] ✓ vigilance.z5
-[435/466] ✗ vindaloo.z5
-        Error: EXT save not implemented
+[435/466] ✓ vindaloo.z5
 [436/466] ✓ vision.z5
-[437/466] ✗ visitor.z5
-        Error: EXT restore not implemented
-[438/466] ✗ wadewar3.z5
-        Error: EXT save not implemented
-[439/466] ✗ warp.z5
-        Error: EXT restore not implemented
+[437/466] ✓ visitor.z5
+[438/466] ✓ wadewar3.z5
+[439/466] ✓ warp.z5
 [440/466] ✓ wcastle.z5
-[441/466] ✗ weather.z5
-        Error: EXT save not implemented
+[441/466] ✓ weather.z5
 [442/466] ✓ wedding.z5
-[443/466] ✗ weirdness.z5
-        Error: EXT save not implemented
-[444/466] ✗ whispers.z5
-        Error: EXT save not implemented
+[443/466] ✓ weirdness.z5
+[444/466] ✓ whispers.z5
 [445/466] ✓ winchest.z8
-[446/466] ✗ windhal1.z8
-        Error: EXT restore not implemented
+[446/466] ✓ windhal1.z8
 [447/466] ✓ winter.z5
-[448/466] ✗ wireless.z5
-        Error: EXT save not implemented
+[448/466] ✓ wireless.z5
 [449/466] ✓ woman.z8
-[450/466] ✗ wossname.z5
-        Error: EXT save not implemented
-[451/466] ✗ wump2ka.z5
-        Error: EXT restore not implemented
+[450/466] ✓ wossname.z5
+[451/466] ✓ wump2ka.z5
 [452/466] ✓ wumpus.z5
 [453/466] ✓ wurm.z5
 [454/466] ✓ yagwad.z5
 [455/466] ✓ z-life.z5
 [456/466] ✓ zball.z5
 [457/466] ✓ zcamel.z5
-[458/466] ✗ zdungeon.z5
-        Error: EXT save not implemented
+[458/466] ✓ zdungeon.z5
 [459/466] ✓ zegro.z8
 [460/466] ✓ zenon.z5
 [461/466] ✓ zfiles.z8
 [462/466] ✓ zombies.z5
-[463/466] ✗ zork_285.z5
-        Error: EXT save not implemented
+[463/466] ✓ zork_285.z5
 [464/466] ✓ zracer.z5
-[465/466] ✗ zsnake.z5
-        Error: EXT save not implemented
+[465/466] ✓ zsnake.z5
 [466/466] ✓ ztrek.z5
 
 Results written to testdata\test_results.json
 
 === SUMMARY ===
-Passed: 194
-Failed: 272
+Passed: 462
+Failed: 4
 Total: 466

@@ -17,7 +17,7 @@ func loadRom(file string) *zmachine.ZMachine {
 	if err != nil {
 		panic(err)
 	}
-	return zmachine.LoadRom(romFileBytes, nil, nil)
+	return zmachine.LoadRom(romFileBytes, nil, nil, nil)
 }
 
 func TestZerothObjectRetrieval(t *testing.T) {

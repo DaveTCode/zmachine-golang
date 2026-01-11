@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -27,6 +28,8 @@ type eraseWindowRequest zmachine.EraseWindowRequest
 type statusBarMessage zmachine.StatusBar
 type screenModelMessage zmachine.ScreenModel
 type inputRequestMessage zmachine.InputRequest
+type saveRequestMessage zmachine.Save
+type restoreRequestMessage zmachine.Restore
 type restartRequest bool
 type runtimeErrorMessage zmachine.RuntimeError
 type warningMessage zmachine.Warning
@@ -109,8 +112,10 @@ const (
 type runStoryModel struct {
 	outputChannel            <-chan any
 	sendChannel              chan<- zmachine.InputResponse
+	saveRestoreChannel       chan<- zmachine.SaveRestoreResponse
 	zMachine                 *zmachine.ZMachine
 	romBytes                 []byte
+	romFilePath              string
 	statusBar                zmachine.StatusBar
 	screenModel              zmachine.ScreenModel
 	lowerWindowTextPreStyled string
@@ -263,6 +268,45 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.validTerminators = msg.ValidTerminators
 		return m, waitForInterpreter(m.outputChannel)
 
+	case saveRequestMessage:
+		if msg.NumBytes == 0 {
+			saveData := m.zMachine.ExportSaveState()
+			filename := msg.Filename
+			if filename == "" {
+				filename = m.defaultSaveFilename()
+			}
+			// TODO: If msg.Prompt is true, ask user for filename
+			err := os.WriteFile(filename, saveData, 0644)
+			if err != nil {
+				m.saveRestoreChannel <- zmachine.SaveResponse{Success: false, Result: 0}
+			} else {
+				m.saveRestoreChannel <- zmachine.SaveResponse{Success: true, Result: 1}
+			}
+		} else {
+			// TODO: Implement auxiliary save
+			m.saveRestoreChannel <- zmachine.SaveResponse{Success: false, Result: 0}
+		}
+		return m, waitForInterpreter(m.outputChannel)
+
+	case restoreRequestMessage:
+		if msg.NumBytes == 0 {
+			filename := msg.Filename
+			if filename == "" {
+				filename = m.defaultSaveFilename()
+			}
+			// TODO: If msg.Prompt is true, ask user for filename
+			data, err := os.ReadFile(filename)
+			if err != nil {
+				m.saveRestoreChannel <- zmachine.RestoreResponse{Success: false, Result: 0}
+			} else {
+				m.saveRestoreChannel <- zmachine.RestoreResponse{Success: true, Result: 2, Data: data}
+			}
+		} else {
+			// TODO: Implement auxiliary restore
+			m.saveRestoreChannel <- zmachine.RestoreResponse{Success: false, Result: 0}
+		}
+		return m, waitForInterpreter(m.outputChannel)
+
 	case zmachine.StateChangeRequest:
 		switch msg {
 		case zmachine.WaitForCharacter:
@@ -323,9 +367,11 @@ func (m runStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reload the ROM from stored bytes
 		zMachineOutputChannel := make(chan any)
 		zMachineInputChannel := make(chan zmachine.InputResponse)
-		m.zMachine = zmachine.LoadRom(m.romBytes, zMachineInputChannel, zMachineOutputChannel)
+		zMachineSaveRestoreChannel := make(chan zmachine.SaveRestoreResponse)
+		m.zMachine = zmachine.LoadRom(m.romBytes, zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel)
 		m.outputChannel = zMachineOutputChannel
 		m.sendChannel = zMachineInputChannel
+		m.saveRestoreChannel = zMachineSaveRestoreChannel
 
 		// Clear screen state
 		m.lowerWindowText = ""
@@ -435,6 +481,21 @@ func prerenderLowerWindowText(m *runStoryModel) {
 	}
 }
 
+// defaultSaveFilename derives a save filename from the ROM file path.
+// It replaces the .z* extension with .sav, e.g., "zork1.z1" -> "zork1.sav"
+func (m runStoryModel) defaultSaveFilename() string {
+	if m.romFilePath == "" {
+		return "game.sav"
+	}
+	base := filepath.Base(m.romFilePath)
+	// Remove .z* extension (z1, z2, z3, z4, z5, z6, z7, z8)
+	ext := filepath.Ext(base)
+	if len(ext) >= 2 && (ext[1] == 'z' || ext[1] == 'Z') {
+		base = base[:len(base)-len(ext)]
+	}
+	return base + ".sav"
+}
+
 func createStatusLine(width int, placeName string, scoreOrHours int, movesOrMinutes int, isTimeBasedGame bool) string {
 	rightHandSide := fmt.Sprintf("Score: %d    Moves %d", scoreOrHours, movesOrMinutes)
 
@@ -538,6 +599,10 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 		switch msg := msg.(type) {
 		case zmachine.InputRequest:
 			return inputRequestMessage(msg)
+		case zmachine.Save:
+			return saveRequestMessage(msg)
+		case zmachine.Restore:
+			return restoreRequestMessage(msg)
 		case zmachine.StateChangeRequest:
 			return msg // Pass through directly, handled in Update
 		case zmachine.EraseWindowRequest:
@@ -567,7 +632,7 @@ func init() {
 	flag.Parse()
 }
 
-func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- zmachine.InputResponse, outputChannel <-chan any, romBytes []byte) tea.Model {
+func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- zmachine.InputResponse, saveRestoreChannel chan<- zmachine.SaveRestoreResponse, outputChannel <-chan any, romBytes []byte, romPath string) tea.Model {
 
 	ti := textinput.New()
 	ti.Focus()
@@ -578,8 +643,10 @@ func newApplicationModel(zMachine *zmachine.ZMachine, inputChannel chan<- zmachi
 	return runStoryModel{
 		outputChannel:           outputChannel,
 		sendChannel:             inputChannel,
+		saveRestoreChannel:      saveRestoreChannel,
 		zMachine:                zMachine,
 		romBytes:                romBytes,
+		romFilePath:             romPath,
 		appState:                appRunning,
 		validTerminators:        []uint8{13}, // Default to just Enter
 		inputBox:                ti,
@@ -600,9 +667,10 @@ func main() {
 		}
 		zMachineOutputChannel := make(chan any)
 		zMachineInputChannel := make(chan zmachine.InputResponse)
-		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineOutputChannel)
+		zMachineSaveRestoreChannel := make(chan zmachine.SaveRestoreResponse)
+		zMachine := zmachine.LoadRom(romFileBytes, zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel)
 
-		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel, romFileBytes)
+		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel, romFileBytes, romFilePath)
 	} else {
 		model = selectstoryui.NewUIModel(newApplicationModel)
 	}

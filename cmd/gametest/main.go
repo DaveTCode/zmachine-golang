@@ -192,9 +192,10 @@ func runGameTest(gamePath string) (result TestResult) {
 	// Create channels
 	outputChannel := make(chan any, 100)
 	inputChannel := make(chan zmachine.InputResponse, 10)
+	saveRestoreChannel := make(chan zmachine.SaveRestoreResponse, 10)
 
 	// Load the Z-machine
-	z := zmachine.LoadRom(storyBytes, inputChannel, outputChannel)
+	z := zmachine.LoadRom(storyBytes, inputChannel, saveRestoreChannel, outputChannel)
 
 	// Commands to try - these are common adventure game commands that should
 	// exercise various parts of the interpreter
@@ -439,6 +440,12 @@ func runGameTest(gamePath string) (result TestResult) {
 						collectOutput = false
 					}
 				}
+			case zmachine.Save:
+				// For testing, always respond with failure (not saving)
+				saveRestoreChannel <- zmachine.SaveResponse{Success: false, Result: 0}
+			case zmachine.Restore:
+				// For testing, always respond with failure (no save file)
+				saveRestoreChannel <- zmachine.RestoreResponse{Success: false, Result: 0}
 			case zmachine.Quit:
 				collectOutput = false
 			case zmachine.Restart:

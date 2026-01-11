@@ -46,7 +46,8 @@ type selectStoryModel struct {
 	storyList              list.Model
 	spinner                spinner.Model
 	err                    error
-	createApplicationModel func(*zmachine.ZMachine, chan<- zmachine.InputResponse, <-chan any, []byte) tea.Model
+	createApplicationModel func(*zmachine.ZMachine, chan<- zmachine.InputResponse, chan<- zmachine.SaveRestoreResponse, <-chan any, []byte, string) tea.Model
+	selectedStoryName      string
 }
 
 type storiesDownloadedMsg []list.Item
@@ -56,7 +57,7 @@ type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
-func NewUIModel(createAppModel func(*zmachine.ZMachine, chan<- zmachine.InputResponse, <-chan any, []byte) tea.Model) tea.Model {
+func NewUIModel(createAppModel func(*zmachine.ZMachine, chan<- zmachine.InputResponse, chan<- zmachine.SaveRestoreResponse, <-chan any, []byte, string) tea.Model) tea.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
@@ -83,6 +84,7 @@ func (m selectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			s, selected := m.storyList.SelectedItem().(story)
 			if selected {
 				m.state = downloadingStory
+				m.selectedStoryName = s.name
 
 				return m, downloadStory(s)
 			}
@@ -101,9 +103,10 @@ func (m selectStoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case downloadedStoryMsg:
 		zMachineOutputChannel := make(chan any)
 		zMachineInputChannel := make(chan zmachine.InputResponse)
-		zMachine := zmachine.LoadRom([]uint8(msg), zMachineInputChannel, zMachineOutputChannel)
+		zMachineSaveRestoreChannel := make(chan zmachine.SaveRestoreResponse)
+		zMachine := zmachine.LoadRom([]uint8(msg), zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel)
 
-		newModel := m.createApplicationModel(zMachine, zMachineInputChannel, zMachineOutputChannel, []byte(msg))
+		newModel := m.createApplicationModel(zMachine, zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel, []byte(msg), m.selectedStoryName)
 		return newModel, newModel.Init()
 
 	case errMsg:

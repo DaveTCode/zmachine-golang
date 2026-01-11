@@ -95,6 +95,7 @@ type ZMachine struct {
 	Alphabets            *zstring.Alphabets
 	outputChannel        chan<- any
 	inputChannel         <-chan InputResponse
+	saveRestoreChannel   <-chan SaveRestoreResponse
 	UndoStates           InMemorySaveStateCache
 	nextFramePointer     uint16          // Used for catch/throw in V5+
 	issuedWarnings       map[string]bool // Track warnings to implement "will ignore further occurrences"
@@ -198,12 +199,13 @@ func (z *ZMachine) writeVariable(variable uint8, value uint16, indirect bool) er
 	return nil
 }
 
-func LoadRom(storyFile []uint8, inputChannel <-chan InputResponse, outputChannel chan<- any) *ZMachine {
+func LoadRom(storyFile []uint8, inputChannel <-chan InputResponse, saveRestoreChannel <-chan SaveRestoreResponse, outputChannel chan<- any) *ZMachine {
 	machine := ZMachine{
-		Core:           zcore.LoadCore(storyFile),
-		inputChannel:   inputChannel,
-		outputChannel:  outputChannel,
-		issuedWarnings: make(map[string]bool),
+		Core:               zcore.LoadCore(storyFile),
+		inputChannel:       inputChannel,
+		saveRestoreChannel: saveRestoreChannel,
+		outputChannel:      outputChannel,
+		issuedWarnings:     make(map[string]bool),
 		streams: Streams{
 			Screen:        true,
 			Transcript:    false,
@@ -698,6 +700,46 @@ func (z *ZMachine) StepMachine() bool {
 		case 4: // NOP
 			// Do nothing
 
+		case 5: // SAVE
+			if z.Core.Version >= 1 && z.Core.Version < 5 {
+				z.outputChannel <- Save{Prompt: true}
+
+				response := <-z.saveRestoreChannel
+				if saveResp, ok := response.(SaveResponse); ok {
+					z.handleBranch(frame, saveResp.Success)
+				} else {
+					z.handleBranch(frame, false)
+				}
+			} else {
+				z.reportError("OP0 save called on unsupported version %d (PC = %x)", z.Core.Version, z.currentInstructionPC)
+				return false
+			}
+
+		case 6: // RESTORE
+			if z.Core.Version >= 1 && z.Core.Version < 5 {
+				z.outputChannel <- Restore{Prompt: true}
+
+				response := <-z.saveRestoreChannel
+				restoreResp, ok := response.(RestoreResponse)
+				if ok && restoreResp.Success && len(restoreResp.Data) > 0 {
+					if z.ImportSaveState(restoreResp.Data) {
+						// PC is now at the save point, need the restored frame
+						newFrame, err := z.callStack.peek()
+						if err != nil {
+							z.reportError("RESTORE: failed to get frame after restore: %v", err)
+							return false
+						}
+						z.handleBranch(newFrame, true)
+						return true
+					}
+					ok = false
+				}
+				z.handleBranch(frame, ok && restoreResp.Success)
+			} else {
+				z.reportError("OP0 restore called on unsupported version %d (PC = %x)", z.Core.Version, z.currentInstructionPC)
+				return false
+			}
+
 		case 7: // RESTART
 			z.outputChannel <- Restart(true)
 			return false
@@ -1104,10 +1146,70 @@ func (z *ZMachine) StepMachine() bool {
 	case VAR:
 		if opcode.opcodeForm == extForm {
 			switch opcode.opcodeByte {
-			case 0x00:
-				return z.reportError("EXT save not implemented")
-			case 0x01:
-				return z.reportError("EXT restore not implemented")
+			case 0x00: // EXT_SAVE
+				var address, numBytes uint32
+				var filename string
+				prompt := true
+
+				if opcode.numOperands >= 2 {
+					address = uint32(opcode.operands[0].Value(z))
+					numBytes = uint32(opcode.operands[1].Value(z))
+					if opcode.numOperands >= 3 {
+						filename = z.readSaveFilename(uint32(opcode.operands[2].Value(z)))
+					}
+					if opcode.numOperands >= 4 {
+						prompt = opcode.operands[3].Value(z) != 0
+					}
+				}
+
+				z.outputChannel <- Save{Prompt: prompt, Filename: filename, Address: address, NumBytes: numBytes}
+
+				response := <-z.saveRestoreChannel
+				if saveResp, ok := response.(SaveResponse); ok {
+					z.writeVariable(z.readIncPC(frame), saveResp.Result, false) // nolint:errcheck
+				} else {
+					z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
+				}
+
+			case 0x01: // EXT_RESTORE
+				var address, numBytes uint32
+				var filename string
+				prompt := true
+
+				if opcode.numOperands >= 2 {
+					address = uint32(opcode.operands[0].Value(z))
+					numBytes = uint32(opcode.operands[1].Value(z))
+					if opcode.numOperands >= 3 {
+						filename = z.readSaveFilename(uint32(opcode.operands[2].Value(z)))
+					}
+					if opcode.numOperands >= 4 {
+						prompt = opcode.operands[3].Value(z) != 0
+					}
+				}
+
+				z.outputChannel <- Restore{Prompt: prompt, Filename: filename, Address: address, NumBytes: numBytes}
+
+				response := <-z.saveRestoreChannel
+				restoreResp, ok := response.(RestoreResponse)
+				if ok && restoreResp.Success && numBytes == 0 && len(restoreResp.Data) > 0 {
+					if z.ImportSaveState(restoreResp.Data) {
+						newFrame, err := z.callStack.peek()
+						if err != nil {
+							z.reportError("EXT_RESTORE: failed to get frame after restore: %v", err)
+							return false
+						}
+						z.writeVariable(z.readIncPC(newFrame), 2, false) // nolint:errcheck
+						return true
+					}
+					ok = false
+				}
+
+				if ok {
+					z.writeVariable(z.readIncPC(frame), restoreResp.Result, false) // nolint:errcheck
+				} else {
+					z.writeVariable(z.readIncPC(frame), 0, false) // nolint:errcheck
+				}
+
 			case 0x02: // LOG_SHIFT
 				num := opcode.operands[0].Value(z)
 				places := int16(opcode.operands[1].Value(z))
