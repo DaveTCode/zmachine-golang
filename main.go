@@ -19,6 +19,7 @@ import (
 
 var (
 	romFilePath  string
+	cacheDir     string
 	baseAppStyle lipgloss.Style
 )
 
@@ -629,6 +630,7 @@ func waitForInterpreter(sub <-chan any) tea.Cmd {
 
 func init() {
 	flag.StringVar(&romFilePath, "rom", "", "The path of a z-machine rom")
+	flag.StringVar(&cacheDir, "cache", "", "Directory to cache downloaded stories (cached for 7 days)")
 	flag.Parse()
 }
 
@@ -672,7 +674,7 @@ func main() {
 
 		model = newApplicationModel(zMachine, zMachineInputChannel, zMachineSaveRestoreChannel, zMachineOutputChannel, romFileBytes, romFilePath)
 	} else {
-		model = selectstoryui.NewUIModel(newApplicationModel)
+		model = selectstoryui.NewUIModel(newApplicationModel, cacheDir)
 	}
 
 	tui := tea.NewProgram(model) //, tea.WithAltScreen())
