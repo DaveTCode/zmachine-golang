@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -353,21 +354,27 @@ func (z *ZMachine) Tokenise(baddr1 uint32, baddr2 uint32, dictionary *dictionary
 
 	for _, chr := range z.Core.ReadSlice(startingLocation, z.Core.MemoryLength()) {
 		if (z.Core.Version < 5 && chr == 0) || (z.Core.Version >= 5 && currentLocation-(baddr1+2) >= chrCount) {
-			words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
+			// Only add a word if we've actually collected some characters
+			if currentLocation > startingLocation {
+				words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
+			}
 			break
 		}
 
 		if chr == ' ' { // space is always a separator
-			words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
+			// Only add a word if we've collected characters before the space
+			if currentLocation > startingLocation {
+				words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
+			}
 			startingLocation = currentLocation + 1
 		} else {
-			for _, separator := range z.dictionary.Header.InputCodes {
-				if chr == separator {
+			if slices.Contains(z.dictionary.Header.InputCodes, chr) {
+				// Only add accumulated word if we have one
+				if currentLocation > startingLocation {
 					words = append(words, tokeniseSingleWord(z.Core.ReadSlice(startingLocation, currentLocation), startingLocation, dictionary, &z.Core, z.Alphabets))
-					words = append(words, tokeniseSingleWord(z.Core.ReadSlice(currentLocation, currentLocation+1), startingLocation, dictionary, &z.Core, z.Alphabets))
-					startingLocation = currentLocation + 1
-					break
 				}
+				words = append(words, tokeniseSingleWord(z.Core.ReadSlice(currentLocation, currentLocation+1), currentLocation, dictionary, &z.Core, z.Alphabets))
+				startingLocation = currentLocation + 1
 			}
 		}
 
